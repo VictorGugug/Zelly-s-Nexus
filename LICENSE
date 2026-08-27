@@ -1,0 +1,206 @@
+# PolyForm Noncommercial License 1.0.0
+
+<https://polyformproject.org/licenses/noncommercial/1.0.0>
+
+Required Notice: Copyright (c) 2026 Zar
+
+## Acceptance
+
+In order to get any license under these terms, you must agree
+to them as both strict obligations and conditions to all
+your licenses.
+
+## Copyright License
+
+The licensor grants you a copyright license for the
+software to do everything you might do with the software
+that would otherwise infringe the licensor's copyright
+in it for any permitted purpose. However, you may
+only distribute the software according to Distribution
+License and make changes or new works based on the software
+according to Changes and New Works License.
+
+## Distribution License
+
+The licensor grants you an additional copyright license
+to distribute copies of the software. Your license
+to distribute covers distributing the software with
+changes and new works permitted by Changes and New Works
+License.
+
+## Notices
+
+You must ensure that anyone who gets a copy of any part of
+the software from you also gets a copy of these terms or the
+URL for them above, as well as copies of any plain-text lines
+beginning with `Required Notice:` that the licensor provided
+with the software, including the one above.
+
+## Changes and New Works License
+
+The licensor grants you an additional copyright license to
+make changes and new works based on the software for any
+permitted purpose.
+
+## Patent License
+
+The licensor grants you a patent license for the software that
+covers patent claims the licensor can license, or becomes able
+to license, that you would infringe by using the software.
+
+## Noncommercial Purposes
+
+Any noncommercial purpose is a permitted purpose.
+
+## Personal Uses
+
+Personal use for research, experiment, and testing for
+the benefit of public knowledge, personal study, private
+entertainment, hobby projects, amateur pursuits, or religious
+observance, without any anticipated commercial application,
+is use for a permitted purpose.
+
+## Noncommercial Organizations
+
+Use by any charitable organization, educational institution,
+public research organization, public safety or health
+organization, environmental protection organization, or
+government institution is use for a permitted purpose
+regardless of the source of funding or obligations resulting
+from the funding.
+
+## Fair Use
+
+You may have fair use rights for the software under the law.
+These terms do not limit them.
+
+## No Other Rights
+
+These terms do not allow you to sublicense or transfer any of
+your licenses to anyone else, or prevent the licensor from
+granting licenses to anyone else. These terms do not imply
+any other licenses.
+
+## Patent Defense
+
+If you make any written claim that the software infringes or
+contributes to infringement of any patent, your patent license
+for the software granted under these terms ends immediately. If
+your company makes such a claim, your patent license ends
+immediately for work on behalf of your company.
+
+## Violations
+
+The first time you are notified in writing that you have
+violated any of these terms, or done anything with the
+software not covered by your licenses, your licenses can
+nonetheless continue if you come into full compliance with
+these terms, and take practical steps to correct past
+violations, within 32 days of receiving notice. Otherwise,
+all your licenses end immediately.
+
+## No Liability
+
+As far as the law allows, the software comes as is, without
+any warranty or condition, and the licensor will not be liable
+to you for any damages arising out of these terms or the use
+or nature of the software, under any kind of legal claim.
+
+## Definitions
+
+The licensor is the individual or entity offering these terms,
+and the software is the software the licensor makes available
+under these terms.
+
+You refers to the individual or entity agreeing to these terms.
+
+Your company is any legal entity, sole proprietorship, or
+other kind of organization that you work for, plus all
+organizations that have control over, are under the control
+of, or are under common control with that organization.
+Control means ownership of substantially all the assets of an
+entity, or the power to direct its management and policies by
+vote, contract, or otherwise. Control can be direct or
+indirect.
+
+Your licenses are all the licenses granted to you for the
+software under these terms.
+
+Use means anything you do with the software requiring one of
+your licenses.
+
+---
+
+# Zelly's Nexus Additional Terms (Plus)
+
+The PolyForm Noncommercial License 1.0.0 above governs this software.
+The following terms are additional conditions specific to Zelly's
+Nexus, layered on top of the license above. Where a term below is
+more restrictive than the license above, the more restrictive term
+applies.
+
+## Study and Contribution
+
+Anyone may view, study, test, and run the source code for any
+permitted purpose under the license above. Contributions are
+accepted through pull requests as described in CONTRIBUTING.md.
+
+## No Commercial Use
+
+The software and any modified version may not be sold, offered as a
+paid service, bundled into a closed-source paid product, or
+monetized through advertising or any other form of monetary
+compensation, whether direct or passive.
+
+## No Closed Derivatives
+
+Any distribution of the software or a modified version must include
+the complete corresponding source code, this file, and a clear
+description of the modifications. A closed-source product built on
+this software is not permitted.
+
+## Independent Projects Stay Out of Scope
+
+An independent project based on the software is permitted only when
+its primary functionality is outside the intended scope of Zelly's
+Nexus. A change that fits within the project's scope and could
+reasonably be merged must be submitted to this repository through an
+issue or pull request instead of being maintained as a separate
+project.
+
+Being outside the project's scope does not lift any other term of
+this license or its additional terms. An independent project still
+follows every rule above: noncommercial use only, complete
+corresponding source code on distribution, preservation of this
+file and its notices, and the fork and linkage rules below. Being
+out of scope only affects whether the project may exist separately
+instead of being merged; it does not authorize closed distribution,
+commercial use, or any other exception.
+
+Before starting a fork or an independent project, an issue must be
+opened first to clarify the intended changes. That issue is where it
+gets decided whether the work proceeds as a fork, as a pull request
+against this repository, or by hand directly against this repository
+if the idea has no code yet.
+
+These terms are kept this strict because having several forks of the
+same project scattered across different places, each drifting from
+the others, is considered an unnecessary and unwanted outcome for
+this project.
+
+## Forks Must Stay Linked
+
+Every fork or redistributed repository containing the software must
+remain clearly linked to the original Zelly's Nexus repository,
+preserve attribution, preserve this file, and state its relationship
+to the original project. A fork that is not linked to the original
+repository is unauthorized under these additional terms. The
+responsible person or organization must remove it immediately after
+notice. These terms cannot force deletion from a hosting service
+that the responsible party does not control.
+
+## Attribution Preserved
+
+Copyright notices, attribution notices, project references, and
+trademarks must not be removed except where necessary to make
+accurate statements about the modified project.

@@ -1,0 +1,12 @@
+Copyright (c) ${year} Zar
+
+This file is part of Zelly's Nexus <https://github.com/VictorGugug/Zellys-Nexus>.
+
+Zelly's Nexus is licensed under the PolyForm Noncommercial License 1.0.0,
+plus this project's additional terms. Both are included in full in the
+LICENSE file at the root of this repository.
+
+You may view, study, and modify this file for any noncommercial purpose.
+You may not use it, or any modified version of it, for commercial purposes,
+in a closed-source product, or for passive monetization. See LICENSE for
+the complete terms, including the rules on forks and independent projects.

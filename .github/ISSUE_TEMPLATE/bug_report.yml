@@ -1,0 +1,61 @@
+name: Bug Report
+description: Create a bug report to help improve the plugin
+title: '[Bug]: '
+labels: [triage]
+body:
+    - type: input
+      id: discord
+      attributes:
+          label: Discord Username (Optional)
+          description: Your Discord tag so you can be identified and credited.
+          placeholder: e.g. example_user
+    - type: input
+      id: version
+      attributes:
+          label: Server Version
+          description: Exact server software and version (Paper, Purpur, Folia, etc.).
+          placeholder: e.g. 26.2 Paper
+      validations:
+          required: true
+    - type: input
+      id: plugin_version
+      attributes:
+          label: Plugin Version
+          description: The version of Zelly's Nexus where the bug occurs.
+          placeholder: e.g. 0.1.0
+      validations:
+          required: true
+    - type: input
+      id: client_version
+      attributes:
+          label: Client Version (Optional)
+          description: Your Minecraft client version, if relevant. Note whether Bedrock via Geyser/Floodgate is involved.
+    - type: textarea
+      id: actual
+      attributes:
+          label: Bug Description
+          description: What the bug is and what is happening in detail. Attach screenshots or videos if the bug is visual, including dialog menus.
+      validations:
+          required: true
+    - type: textarea
+      id: reproduce
+      attributes:
+          label: Steps to Reproduce
+          description: List the exact steps to make the bug happen again.
+          placeholder: |
+              1. Open the relevant dialog menu
+              2. Perform the action
+              3. See error
+      validations:
+          required: true
+    - type: textarea
+      id: logs
+      attributes:
+          label: Error Logs
+          description: Paste the error from console or logs folder. Use a paste site (pastes.dev / mclo.gs) if it is long.
+          placeholder: Paste error log here...
+    - type: textarea
+      id: additional_context
+      attributes:
+          label: Additional Context
+          description: Add any other context about the problem here.

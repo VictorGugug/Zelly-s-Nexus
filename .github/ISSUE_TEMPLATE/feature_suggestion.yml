@@ -1,0 +1,41 @@
+name: Feature Suggestion
+description: Suggest a feature, or open the required discussion before starting a fork or an independent project
+title: '[Feature]: '
+labels: [enhancement]
+body:
+    - type: input
+      id: discord
+      attributes:
+          label: Discord Username (Optional)
+          description: Your Discord tag so you can be identified and credited.
+          placeholder: e.g. example_user
+    - type: textarea
+      id: feature_description
+      attributes:
+          label: Feature Description
+          description: Describe the feature idea. Be as clear and concise as possible about why it is wanted and what problem it solves. Images or sketches can be attached to illustrate the idea.
+      validations:
+          required: true
+    - type: dropdown
+      id: intended_path
+      attributes:
+          label: Intended Path
+          description: How the idea is expected to move forward, per CONTRIBUTING.md. This is a starting point for discussion, not a final decision.
+          options:
+              - Pull request against this repository
+              - Fork (requires this issue to clarify scope first)
+              - No code yet, implemented by hand if accepted
+      validations:
+          required: true
+    - type: textarea
+      id: scope_note
+      attributes:
+          label: Scope Note
+          description: Explain how this fits within the project's current scope as described in README.md, or why it would need to exist as an independent project instead.
+      validations:
+          required: true
+    - type: textarea
+      id: additional_context
+      attributes:
+          label: Additional Context
+          description: Add any other context about the feature here.
