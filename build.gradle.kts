@@ -7,6 +7,7 @@
 // LICENSE file at the root of this repository.
 
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.api.tasks.testing.Test
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 
 plugins {
@@ -35,5 +36,9 @@ allprojects {
 
     tasks.withType<JavaCompile>().configureEach {
         options.release.set(25)
+    }
+
+    tasks.withType<Test>().configureEach {
+        useJUnitPlatform()
     }
 }

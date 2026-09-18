@@ -2,3 +2,7 @@
 build/
 .gradle/
 __pycache__/
+.classpath
+.project
+.settings/
+bin/
