@@ -6,11 +6,19 @@
 # plus this project's additional terms. Both are included in full in the
 # LICENSE file at the root of this repository.
 
-prefix: "[ZellysNexus]"
+prefix: "[Zelly's Nexus]"
 boot:
-  title: "ZELLY'S NEXUS"
-  version: "Version %s"
+  version: "Zelly's Nexus v%s"
   platform: "Minecraft 26.x (Paper family)"
   language: "Language: English"
+  tagline1: "Modular Server Ecosystem"
+  tagline2: "for Paper/Folia"
+  detecting: "Detecting integrations..."
+  manager: "(ModuleManager) -> Enabling manager..."
 plugin:
   disabled: "Zelly's Nexus disabled."
+status:
+  loaded_in: "loaded in %sms"
+  disabled: "disabled"
+  found: "found"
+  not_found: "not found"

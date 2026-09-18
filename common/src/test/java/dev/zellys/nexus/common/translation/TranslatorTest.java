@@ -32,7 +32,7 @@ class TranslatorTest {
     void unknownLanguageFallsBackToEnglish() {
         Translator translator = new Translator("xx");
         assertEquals("en", translator.activeLanguage());
-        assertEquals(new Translator("en").get(TranslationKey.BOOT_TITLE), translator.get(TranslationKey.BOOT_TITLE));
+        assertEquals(new Translator("en").get(TranslationKey.BOOT_VERSION), translator.get(TranslationKey.BOOT_VERSION));
     }
 
     @Test
