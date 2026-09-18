@@ -9,7 +9,7 @@
 name: ZellysNexus
 version: ${version}
 main: dev.zellys.nexus.ZellysNexus
-api-version: '26.3'
+api-version: '26.1'
 author: Zar
 description: All-in-one plugin for Paper servers.
 website: https://github.com/VictorGugug/Zelly-s-Nexus

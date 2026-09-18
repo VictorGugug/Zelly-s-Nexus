@@ -24,6 +24,9 @@ dependencies {
 }
 
 tasks {
+    named<AbstractArchiveTask>("jar") {
+        isEnabled = false
+    }
     named<AbstractArchiveTask>("shadowJar") {
         archiveBaseName.set("ZellysNexus")
         archiveClassifier.set("")
