@@ -22,6 +22,9 @@ public enum TranslationKey {
     STATUS_DISABLED("status.disabled"),
     STATUS_FOUND("status.found"),
     STATUS_NOT_FOUND("status.not_found"),
+    UPDATE_AVAILABLE("update.available"),
+    UPDATE_CHECK_FAILED("update.check_failed"),
+    UPDATE_UPTODATE("update.uptodate"),
     PLUGIN_DISABLED("plugin.disabled");
 
     private final String key;

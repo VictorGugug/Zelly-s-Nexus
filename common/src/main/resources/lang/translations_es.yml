@@ -22,3 +22,7 @@ status:
   disabled: "desactivado"
   found: "encontrado"
   not_found: "no encontrado"
+update:
+  available: "Actualización disponible: Zelly's Nexus %s (%s)"
+  check_failed: "No se pudo comprobar si hay actualizaciones."
+  uptodate: "Actualizado (v%s)."

@@ -13,10 +13,13 @@ import dev.zellys.nexus.common.boot.BootPrinter;
 import dev.zellys.nexus.common.boot.BootReport;
 import dev.zellys.nexus.common.translation.TranslationKey;
 import dev.zellys.nexus.common.translation.Translator;
+import dev.zellys.nexus.common.update.GitHubTagSource;
+import dev.zellys.nexus.common.update.UpdateChecker;
 import java.util.ArrayList;
 import java.util.List;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
 public final class ZellysNexus extends JavaPlugin {
     private Translator translator;
@@ -48,6 +51,25 @@ public final class ZellysNexus extends JavaPlugin {
         for (String line : BootPrinter.render(report, translator)) {
             getLogger().info(line);
         }
+        checkForUpdates();
+    }
+
+    private void checkForUpdates() {
+        String version = getDescription().getVersion();
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                UpdateChecker.UpdateResult result = UpdateChecker.check(version, "VictorGugug/Zelly-s-Nexus",
+                        new GitHubTagSource("VictorGugug/Zelly-s-Nexus"));
+                if (result.status() == UpdateChecker.Status.UPDATE_AVAILABLE) {
+                    getLogger().info(translator.get(TranslationKey.UPDATE_AVAILABLE, result.latestVersion(), result.url()));
+                } else if (result.status() == UpdateChecker.Status.CHECK_FAILED) {
+                    getLogger().warning(translator.get(TranslationKey.UPDATE_CHECK_FAILED));
+                } else {
+                    getLogger().info(translator.get(TranslationKey.UPDATE_UPTODATE, version));
+                }
+            }
+        }.runTaskAsynchronously(this);
     }
 
     @Override

@@ -233,11 +233,11 @@ def main():
 
         ("Core Dependency", "FoliaLib", gv.get("folialib", "0.5.1"), "maven", "https://repo.tcoded.com/releases/com/tcoded/FoliaLib/maven-metadata.xml"),
         ("Core Dependency", "HikariCP", gv.get("hikari", "7.1.0"), "maven", "https://repo1.maven.org/maven2/com/zaxxer/HikariCP/maven-metadata.xml"),
-        ("Core Dependency", "mysql-connector-j", gv.get("mysql", "9.1.0"), "maven", "https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/maven-metadata.xml"),
+        ("Core Dependency", "mysql-connector-j", gv.get("mysql", "26.7.0"), "maven", "https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/maven-metadata.xml"),
         ("Core Dependency", "Caffeine", gv.get("caffeine", "3.2.4"), "maven", "https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/maven-metadata.xml"),
-        ("Core Dependency", "Commons Lang3", gv.get("commons_lang", "3.17.0"), "maven", "https://repo1.maven.org/maven2/org/apache/commons/commons-lang3/maven-metadata.xml"),
+        ("Core Dependency", "Commons Lang3", gv.get("commons_lang", "3.20.0"), "maven", "https://repo1.maven.org/maven2/org/apache/commons/commons-lang3/maven-metadata.xml"),
         ("Core Dependency", "bStats Bukkit", gv.get("bstats", "3.2.1"), "maven", "https://repo1.maven.org/maven2/org/bstats/bstats-bukkit/maven-metadata.xml"),
-        ("Core Dependency", "Adventure API", gv.get("adventure", "4.17.0"), "maven", "https://repo1.maven.org/maven2/net/kyori/adventure-api/maven-metadata.xml"),
+        ("Core Dependency", "Adventure API", gv.get("adventure", "5.2.0"), "maven", "https://repo1.maven.org/maven2/net/kyori/adventure-api/maven-metadata.xml"),
         ("Core Dependency", "JetBrains Annotations", gv.get("annotations", "26.1.0"), "maven", "https://repo1.maven.org/maven2/org/jetbrains/annotations/maven-metadata.xml"),
         ("Core Dependency", "BCrypt", "0.10.2", "maven", "https://repo1.maven.org/maven2/at/favre/lib/bcrypt/maven-metadata.xml"),
 
