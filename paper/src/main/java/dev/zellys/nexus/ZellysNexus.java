@@ -9,6 +9,7 @@
  */
 package dev.zellys.nexus;
 
+import dev.zellys.nexus.boot.PaperBoot;
 import dev.zellys.nexus.common.boot.BootPrinter;
 import dev.zellys.nexus.common.boot.BootReport;
 import dev.zellys.nexus.common.translation.TranslationKey;
@@ -51,9 +52,7 @@ public final class ZellysNexus extends JavaPlugin {
         modules.add(new BootReport.Module("itemedit", false, 0));
         BootReport report = new BootReport(getDescription().getVersion(), integrations, modules);
         getLogger().info(translator.get(TranslationKey.BOOT_VERSION, report.version()));
-        for (String line : BootPrinter.render(report, translator)) {
-            getLogger().info(line);
-        }
+        PaperBoot.send(getServer().getConsoleSender(), BootPrinter.render(report, translator));
         checkForUpdates();
     }
 

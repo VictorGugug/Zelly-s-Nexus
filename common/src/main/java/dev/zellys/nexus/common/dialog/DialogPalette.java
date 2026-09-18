@@ -16,6 +16,7 @@ public final class DialogPalette {
     public static final int PASTEL_CORAL = 0xF2B8B0;
     public static final int PASTEL_GOLD = 0xF5DE9E;
     public static final int PASTEL_PURPLE = 0xC9B8F0;
+    public static final int BULLET_YELLOW = 0xF5DE6B;
     public static final int TEXT_WHITE = 0xFFFFFF;
     public static final int TEXT_GRAY = 0x9AA0A6;
 

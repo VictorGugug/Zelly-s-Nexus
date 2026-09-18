@@ -9,6 +9,7 @@
  */
 package dev.zellys.nexus.common.boot;
 
+import dev.zellys.nexus.common.dialog.DialogPalette;
 import dev.zellys.nexus.common.translation.TranslationKey;
 import dev.zellys.nexus.common.translation.Translator;
 import java.util.ArrayList;
@@ -36,34 +37,42 @@ public final class BootPrinter {
     private BootPrinter() {
     }
 
-    public static List<String> render(BootReport report, Translator translator) {
-        List<String> lines = new ArrayList<>();
-        lines.add("");
+    public static List<BootLine> render(BootReport report, Translator translator) {
+        List<BootLine> lines = new ArrayList<>();
+        lines.add(new BootLine("", DialogPalette.TEXT_WHITE));
         for (String row : LOGO) {
-            lines.add("§b" + row);
+            lines.add(new BootLine(row, DialogPalette.PASTEL_BLUE));
         }
         for (String row : LOGO_LINE_2) {
-            lines.add("§b" + row);
+            lines.add(new BootLine(row, DialogPalette.PASTEL_BLUE));
         }
-        lines.add("§f" + center(translator.get(TranslationKey.BOOT_TAGLINE_1)));
-        lines.add("§f" + center(translator.get(TranslationKey.BOOT_TAGLINE_2)));
-        lines.add("");
-        lines.add("§f" + translator.get(TranslationKey.BOOT_DETECTING));
+        lines.add(new BootLine(center(translator.get(TranslationKey.BOOT_TAGLINE_1)), DialogPalette.TEXT_WHITE));
+        lines.add(new BootLine(center(translator.get(TranslationKey.BOOT_TAGLINE_2)), DialogPalette.TEXT_WHITE));
+        lines.add(new BootLine("", DialogPalette.TEXT_WHITE));
+        lines.add(new BootLine(translator.get(TranslationKey.BOOT_DETECTING), DialogPalette.TEXT_WHITE));
         for (BootReport.Integration integration : report.integrations()) {
-            String status = integration.found()
-                    ? "§a" + translator.get(TranslationKey.STATUS_FOUND)
-                    : "§7" + translator.get(TranslationKey.STATUS_NOT_FOUND);
-            lines.add("§e• §f" + dots(integration.name()) + " " + status);
+            lines.add(statusLine(integration.name(), integration.found()
+                    ? translator.get(TranslationKey.STATUS_FOUND)
+                    : translator.get(TranslationKey.STATUS_NOT_FOUND),
+                    integration.found()));
         }
-        lines.add("");
-        lines.add("§f" + translator.get(TranslationKey.BOOT_MANAGER));
+        lines.add(new BootLine("", DialogPalette.TEXT_WHITE));
+        lines.add(new BootLine(translator.get(TranslationKey.BOOT_MANAGER), DialogPalette.TEXT_WHITE));
         for (BootReport.Module module : report.modules()) {
-            String status = module.enabled()
-                    ? "§a" + translator.get(TranslationKey.STATUS_LOADED_IN, module.millis())
-                    : "§7" + translator.get(TranslationKey.STATUS_DISABLED);
-            lines.add("§e• §f" + dots(module.name()) + " " + status);
+            lines.add(statusLine(module.name(), module.enabled()
+                    ? translator.get(TranslationKey.STATUS_LOADED_IN, module.millis())
+                    : translator.get(TranslationKey.STATUS_DISABLED),
+                    module.enabled()));
         }
         return lines;
+    }
+
+    private static BootLine statusLine(String name, String status, boolean good) {
+        int color = good ? DialogPalette.PASTEL_MINT : DialogPalette.TEXT_GRAY;
+        return new BootLine(List.of(
+                new BootLine.Segment("• ", DialogPalette.BULLET_YELLOW),
+                new BootLine.Segment(dots(name) + " ", DialogPalette.TEXT_WHITE),
+                new BootLine.Segment(status, color)));
     }
 
     static String center(String text) {
