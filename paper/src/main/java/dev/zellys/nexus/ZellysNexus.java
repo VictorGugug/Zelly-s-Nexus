@@ -15,6 +15,7 @@ import dev.zellys.nexus.common.translation.TranslationKey;
 import dev.zellys.nexus.common.translation.Translator;
 import dev.zellys.nexus.common.update.GitHubTagSource;
 import dev.zellys.nexus.common.update.UpdateChecker;
+import dev.zellys.nexus.dialog.DialogManager;
 import java.util.ArrayList;
 import java.util.List;
 import org.bukkit.plugin.Plugin;
@@ -23,11 +24,13 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 public final class ZellysNexus extends JavaPlugin {
     private Translator translator;
+    private DialogManager dialogs;
 
     @Override
     public void onEnable() {
         long start = System.nanoTime();
         translator = new Translator("en");
+        dialogs = new DialogManager(translator);
         long translationMs = (System.nanoTime() - start) / 1_000_000;
         List<BootReport.Integration> integrations = List.of(
                 integration("LuckPerms"),
@@ -79,6 +82,10 @@ public final class ZellysNexus extends JavaPlugin {
 
     public Translator translator() {
         return translator;
+    }
+
+    public DialogManager dialogs() {
+        return dialogs;
     }
 
     private BootReport.Integration integration(String name) {
