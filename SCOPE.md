@@ -1,7 +1,7 @@
 <!--
 Copyright (c) 2026 Zar
 
-This file is part of Zelly's Nexus <https://github.com/VictorGugug/Zellys-Nexus>.
+This file is part of Zelly's Nexus <https://github.com/VictorGugug/Zelly-s-Nexus>.
 
 Zelly's Nexus is licensed under the PolyForm Noncommercial License 1.0.0,
 plus this project's additional terms. Both are included in full in the
@@ -24,13 +24,14 @@ during development. It is a solo project that I maintain.
 
 ## Platform target
 
-- Minecraft: Java Edition 26.x.
-- Initial server software compatibility: Paper, Purpur, and Folia.
+- Minecraft: Java Edition 26.x, including 26.3. No older Minecraft
+  versions are supported.
+- Server software: Paper and its forks only (Paper, Purpur, Folia).
+  No Spigot support.
 - Possible compatibility with Minecraft: Bedrock Edition through the
   Geyser and Floodgate integration layer. Not guaranteed until
   implemented and tested.
-- Any other server software: compatibility will be assessed
-  individually as it comes up; none is committed to yet.
+- Any other server software: none planned.
 
 ## Core interface direction
 

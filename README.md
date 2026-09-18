@@ -59,7 +59,7 @@ timeline yet.
 
 ## Contact
 
-I maintain this project. [Open an issue](https://github.com/VictorGugug/Zellys-Nexus/issues) for bugs or feature suggestions, per [CONTRIBUTING.md](CONTRIBUTING.md).
+I maintain this project. [Open an issue](https://github.com/VictorGugug/Zelly-s-Nexus/issues) for bugs or feature suggestions, per [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

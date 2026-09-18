@@ -1,1 +1,4 @@
 /NEXXUS
+build/
+.gradle/
+__pycache__/
