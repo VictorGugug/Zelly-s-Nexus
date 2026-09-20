@@ -19,7 +19,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class GitHubTagSource implements UpdateChecker.TagSource {
-    private static final Pattern TAG = Pattern.compile("\"tag_name\"\\s*:\\s*\"([^\"]+)\"");
+    private static final Pattern TAG = Pattern.compile("\"name\"\\s*:\\s*\"([^\"]+)\"");
 
     private final String repository;
 

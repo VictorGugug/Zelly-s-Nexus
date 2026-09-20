@@ -11,6 +11,7 @@ package dev.zellys.nexus.common.translation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 class TranslatorTest {
@@ -32,11 +33,18 @@ class TranslatorTest {
     void unknownLanguageFallsBackToEnglish() {
         Translator translator = new Translator("xx");
         assertEquals("en", translator.activeLanguage());
-        assertEquals(new Translator("en").get(TranslationKey.BOOT_VERSION), translator.get(TranslationKey.BOOT_VERSION));
+        assertEquals(new Translator("en").get(TranslationKey.BOOT_VERSION, "0.1.0"), translator.get(TranslationKey.BOOT_VERSION, "0.1.0"));
     }
 
     @Test
     void unknownLanguageCompletionIsZero() {
         assertEquals(0, new Translator("en").completion("xx"));
+    }
+
+    @Test
+    void formatArgsWork() {
+        Translator translator = new Translator("en");
+        String formatted = translator.get(TranslationKey.BOOT_VERSION, "1.2.3");
+        assertTrue(formatted.contains("1.2.3"));
     }
 }

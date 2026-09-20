@@ -20,7 +20,12 @@ repositories {
 
 dependencies {
     implementation(project(":common"))
+    implementation("at.favre.lib:bcrypt:0.10.2")
     compileOnly("io.papermc.paper:paper-api:26.3.build.+")
+    testImplementation(platform("org.junit:junit-bom:6.1.3"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly("io.papermc.paper:paper-api:26.3.build.+")
 }
 
 tasks {

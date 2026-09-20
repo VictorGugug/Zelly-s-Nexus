@@ -31,6 +31,14 @@ into a single large pull request. A larger pull request is only
 accepted when the change is genuinely one indivisible piece of work
 that does not make sense split apart.
 
+### Testing Requirements
+
+To ensure the stability of the project, all pull requests must adhere to the following testing rules:
+- Every new function/feature MUST have a corresponding test.
+- Every modified function MUST have its test updated.
+- Tests must verify the function is functional (not just that it compiles).
+- Debug command must include self-test for new modules.
+
 ## Use of AI
 
 Using AI tools to help write a contribution is permitted, on the
