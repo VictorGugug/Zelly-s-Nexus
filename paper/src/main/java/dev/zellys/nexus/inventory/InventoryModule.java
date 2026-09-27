@@ -12,6 +12,7 @@ package dev.zellys.nexus.inventory;
 import dev.zellys.nexus.ZellysNexus;
 import dev.zellys.nexus.common.translation.TranslationKey;
 import dev.zellys.nexus.common.translation.Translator;
+import dev.zellys.nexus.thread.ThreadRouter;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.Material;
@@ -56,10 +57,12 @@ final class DeathListener implements Listener {
 }
 
 final class InventorySubcommand implements BasicCommand {
+    private final ZellysNexus plugin;
     private final Translator translator;
 
-    InventorySubcommand(Translator translator) {
-        this.translator = translator;
+    InventorySubcommand(ZellysNexus plugin) {
+        this.plugin = plugin;
+        this.translator = plugin.translator();
     }
 
     @Override
@@ -124,7 +127,7 @@ final class InventorySubcommand implements BasicCommand {
                     player.sendMessage(translator.get(TranslationKey.INV_OFFLINE));
                     return;
                 }
-                clearTarget.getInventory().clear();
+                ThreadRouter.owner(plugin, clearTarget, () -> clearTarget.getInventory().clear());
                 player.sendMessage(translator.get(TranslationKey.INV_CLEARED, clearTarget.getName()));
                 break;
 
@@ -142,7 +145,7 @@ final class InventorySubcommand implements BasicCommand {
                     player.sendMessage(translator.get(TranslationKey.INV_OFFLINE));
                     return;
                 }
-                enderClearTarget.getEnderChest().clear();
+                ThreadRouter.owner(plugin, enderClearTarget, () -> enderClearTarget.getEnderChest().clear());
                 player.sendMessage(translator.get(TranslationKey.INV_ENDER_CLEARED, enderClearTarget.getName()));
                 break;
 
@@ -161,7 +164,10 @@ final class InventorySubcommand implements BasicCommand {
                     player.sendMessage(translator.get(TranslationKey.INV_OFFLINE));
                     return;
                 }
-                cloneDest.getInventory().setContents(DeathBackup.copy(cloneSrc.getInventory().getContents()));
+                ThreadRouter.owner(plugin, cloneSrc, () -> {
+                    ItemStack[] contents = DeathBackup.copy(cloneSrc.getInventory().getContents());
+                    ThreadRouter.owner(plugin, cloneDest, () -> cloneDest.getInventory().setContents(contents));
+                });
                 player.sendMessage(translator.get(TranslationKey.INV_CLONED, cloneSrc.getName(), cloneDest.getName()));
                 break;
 
@@ -180,7 +186,10 @@ final class InventorySubcommand implements BasicCommand {
                     player.sendMessage(translator.get(TranslationKey.INV_OFFLINE));
                     return;
                 }
-                enderCloneDest.getEnderChest().setContents(DeathBackup.copy(enderCloneSrc.getEnderChest().getContents()));
+                ThreadRouter.owner(plugin, enderCloneSrc, () -> {
+                    ItemStack[] contents = DeathBackup.copy(enderCloneSrc.getEnderChest().getContents());
+                    ThreadRouter.owner(plugin, enderCloneDest, () -> enderCloneDest.getEnderChest().setContents(contents));
+                });
                 player.sendMessage(translator.get(TranslationKey.INV_ENDER_CLONED, enderCloneSrc.getName(), enderCloneDest.getName()));
                 break;
 
@@ -212,7 +221,8 @@ final class InventorySubcommand implements BasicCommand {
                         return;
                     }
                 }
-                giveTarget.getInventory().addItem(new ItemStack(mat, amount));
+                ItemStack given = new ItemStack(mat, amount);
+                ThreadRouter.owner(plugin, giveTarget, () -> giveTarget.getInventory().addItem(given));
                 player.sendMessage(translator.get(TranslationKey.INV_GIVEN, amount + "x " + mat.name(), giveTarget.getName()));
                 break;
 
@@ -244,7 +254,8 @@ final class InventorySubcommand implements BasicCommand {
                         return;
                     }
                 }
-                enderGiveTarget.getEnderChest().addItem(new ItemStack(enderMat, enderAmount));
+                ItemStack enderGiven = new ItemStack(enderMat, enderAmount);
+                ThreadRouter.owner(plugin, enderGiveTarget, () -> enderGiveTarget.getEnderChest().addItem(enderGiven));
                 player.sendMessage(translator.get(TranslationKey.INV_ENDER_GIVEN, enderAmount + "x " + enderMat.name(), enderGiveTarget.getName()));
                 break;
 
@@ -266,9 +277,12 @@ final class InventorySubcommand implements BasicCommand {
                     player.sendMessage(translator.get(TranslationKey.INV_EMPTY));
                     return;
                 }
-                rollTarget.getInventory().setContents(DeathBackup.copy(snapshot.contents()));
-                rollTarget.getInventory().setArmorContents(DeathBackup.copy(snapshot.armor()));
-                rollTarget.setLevel(snapshot.level());
+                Player restored = rollTarget;
+                ThreadRouter.owner(plugin, restored, () -> {
+                    restored.getInventory().setContents(DeathBackup.copy(snapshot.contents()));
+                    restored.getInventory().setArmorContents(DeathBackup.copy(snapshot.armor()));
+                    restored.setLevel(snapshot.level());
+                });
                 player.sendMessage(translator.get(TranslationKey.INV_RESTORED));
                 break;
 
@@ -338,7 +352,7 @@ public final class InventoryModule {
     public static long enable(ZellysNexus plugin, dev.zellys.nexus.command.ZnRootCommand znCommand) {
         long start = System.nanoTime();
         plugin.getServer().getPluginManager().registerEvents(new DeathListener(), plugin);
-        InventorySubcommand cmd = new InventorySubcommand(plugin.translator());
+        InventorySubcommand cmd = new InventorySubcommand(plugin);
         plugin.registerCommand("inventory", cmd);
         if (znCommand != null) {
             znCommand.registerCommand("inventory", "inv", cmd);

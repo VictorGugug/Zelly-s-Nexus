@@ -11,6 +11,7 @@ package dev.zellys.nexus.essentials;
 
 import dev.zellys.nexus.ZellysNexus;
 import dev.zellys.nexus.common.translation.TranslationKey;
+import dev.zellys.nexus.thread.ThreadRouter;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.Bukkit;
@@ -218,7 +219,7 @@ public final class EssentialsSubcommand implements BasicCommand {
                 Player target = Bukkit.getPlayer(args[1]);
                 if (target != null) {
                     String reason = args.length > 2 ? String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length)) : "-";
-                    target.kick(net.kyori.adventure.text.Component.text(reason));
+                    ThreadRouter.owner(plugin, target, () -> target.kick(net.kyori.adventure.text.Component.text(reason)));
                     player.sendMessage(plugin.translator().get(TranslationKey.ESS_KICKED, target.getName(), reason));
                 }
             }
@@ -234,8 +235,11 @@ public final class EssentialsSubcommand implements BasicCommand {
                         return;
                     }
                 }
-                var attr = target.getAttribute(Attribute.MAX_HEALTH);
-                target.setHealth(attr != null ? attr.getValue() : 20.0);
+                Player healed = target;
+                ThreadRouter.owner(plugin, healed, () -> {
+                    var attr = healed.getAttribute(Attribute.MAX_HEALTH);
+                    healed.setHealth(attr != null ? attr.getValue() : 20.0);
+                });
                 player.sendMessage(plugin.translator().get(TranslationKey.ESS_HEALED, target.getName()));
             }
             case "feed" -> {
@@ -248,7 +252,8 @@ public final class EssentialsSubcommand implements BasicCommand {
                         return;
                     }
                 }
-                target.setFoodLevel(20);
+                Player fed = target;
+                ThreadRouter.owner(plugin, fed, () -> fed.setFoodLevel(20));
                 player.sendMessage(plugin.translator().get(TranslationKey.ESS_FED, target.getName()));
             }
             case "fly" -> {
@@ -321,11 +326,13 @@ public final class EssentialsSubcommand implements BasicCommand {
                 player.setInvisible(!current);
                 for (Player online : Bukkit.getOnlinePlayers()) {
                     if (!online.equals(player)) {
-                        if (!current) {
-                            online.hidePlayer(plugin, player);
-                        } else {
-                            online.showPlayer(plugin, player);
-                        }
+                        ThreadRouter.owner(plugin, online, () -> {
+                            if (!current) {
+                                online.hidePlayer(plugin, player);
+                            } else {
+                                online.showPlayer(plugin, player);
+                            }
+                        });
                     }
                 }
                 player.sendMessage(plugin.translator().get(!current ? TranslationKey.ESS_VANISH_ON : TranslationKey.ESS_VANISH_OFF));
@@ -361,15 +368,20 @@ public final class EssentialsSubcommand implements BasicCommand {
                     player.sendMessage(plugin.translator().get(TranslationKey.ESS_INVALID_TIME, args[1]));
                     return;
                 }
-                player.getWorld().setTime(ticks);
+                org.bukkit.World world = player.getWorld();
+                ThreadRouter.global(plugin, () -> world.setTime(ticks));
                 player.sendMessage(plugin.translator().get(TranslationKey.ESS_TIME_SET, args[1]));
             }
             case "weather" -> {
                 if (!player.hasPermission("zn.essentials.admin")) return;
                 if (args.length < 2) return;
                 boolean storm = args[1].equalsIgnoreCase("storm") || args[1].equalsIgnoreCase("rain");
-                player.getWorld().setStorm(storm);
-                player.getWorld().setThundering(args[1].equalsIgnoreCase("thunder"));
+                boolean thunder = args[1].equalsIgnoreCase("thunder");
+                org.bukkit.World world = player.getWorld();
+                ThreadRouter.global(plugin, () -> {
+                    world.setStorm(storm);
+                    world.setThundering(thunder);
+                });
                 player.sendMessage(plugin.translator().get(TranslationKey.ESS_WEATHER_SET, args[1]));
             }
             case "speed" -> {
@@ -666,7 +678,7 @@ public final class EssentialsSubcommand implements BasicCommand {
                 if (args.length < 2) return;
                 Player target = Bukkit.getPlayerExact(args[1]);
                 if (target == null) return;
-                target.setFireTicks(100);
+                ThreadRouter.owner(plugin, target, () -> target.setFireTicks(100));
                 player.sendMessage(plugin.translator().get(TranslationKey.ESS_BURNED, target.getName(), 5));
                 target.sendMessage(plugin.translator().get(TranslationKey.ESS_BURNED, target.getName(), 5));
             }
@@ -678,8 +690,9 @@ public final class EssentialsSubcommand implements BasicCommand {
             }
             case "thunder" -> {
                 if (!player.hasPermission("zn.essentials.admin")) return;
-                boolean on = !player.getWorld().hasStorm();
-                player.getWorld().setThundering(on);
+                org.bukkit.World world = player.getWorld();
+                boolean on = !world.hasStorm();
+                ThreadRouter.global(plugin, () -> world.setThundering(on));
                 player.sendMessage(plugin.translator().get(TranslationKey.ESS_THUNDER, on ? "on" : "off"));
             }
             case "sudo" -> {
@@ -688,7 +701,7 @@ public final class EssentialsSubcommand implements BasicCommand {
                 Player target = Bukkit.getPlayerExact(args[1]);
                 if (target == null) return;
                 String cmd = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length));
-                target.chat(cmd.startsWith("/") ? cmd : "/" + cmd);
+                ThreadRouter.owner(plugin, target, () -> target.chat(cmd.startsWith("/") ? cmd : "/" + cmd));
                 player.sendMessage(plugin.translator().get(TranslationKey.ESS_SUDO, target.getName(), cmd));
             }
             case "kill" -> {
@@ -699,7 +712,7 @@ public final class EssentialsSubcommand implements BasicCommand {
                 } else {
                     Player target = Bukkit.getPlayerExact(args[1]);
                     if (target == null) return;
-                    target.setHealth(0.0);
+                    ThreadRouter.owner(plugin, target, () -> target.setHealth(0.0));
                     player.sendMessage(plugin.translator().get(TranslationKey.ESS_KILLED, target.getName()));
                 }
             }
@@ -708,7 +721,7 @@ public final class EssentialsSubcommand implements BasicCommand {
                 int kicked = 0;
                 for (Player online : new java.util.ArrayList<>(Bukkit.getOnlinePlayers())) {
                     if (!online.equals(player)) {
-                        online.kick();
+                        ThreadRouter.owner(plugin, online, () -> online.kick());
                         kicked++;
                     }
                 }

@@ -12,6 +12,7 @@ package dev.zellys.nexus.itemedit;
 import dev.zellys.nexus.common.dialog.DialogPalette;
 import dev.zellys.nexus.common.translation.TranslationKey;
 import dev.zellys.nexus.common.translation.Translator;
+import dev.zellys.nexus.thread.ThreadRouter;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
@@ -172,7 +173,9 @@ final class ItemEditSubcommand implements BasicCommand {
                     } catch (NumberFormatException ignored) {}
                 }
                 retrieved.setAmount(amount);
-                target.getInventory().addItem(retrieved);
+                Player receiver = target;
+                ThreadRouter.owner(org.bukkit.plugin.java.JavaPlugin.getPlugin(dev.zellys.nexus.ZellysNexus.class), receiver,
+                        () -> receiver.getInventory().addItem(retrieved));
                 player.sendMessage(translator.get(TranslationKey.ITEMEDIT_SERVER_GIVEN, key, target.getName()));
             } else {
                 player.sendMessage(translator.get(TranslationKey.ITEMEDIT_USAGE));

@@ -12,6 +12,7 @@ package dev.zellys.nexus.tab;
 import dev.zellys.nexus.ZellysNexus;
 import dev.zellys.nexus.common.translation.TranslationKey;
 import dev.zellys.nexus.common.translation.Translator;
+import dev.zellys.nexus.thread.ThreadRouter;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.event.EventHandler;
@@ -78,7 +79,7 @@ final class TabSubcommand implements BasicCommand {
                 service.clear();
                 for (org.bukkit.entity.Player p : plugin.getServer().getOnlinePlayers()) {
                     if (!disabled.contains(p.getUniqueId())) {
-                        service.apply(p);
+                        ThreadRouter.owner(plugin, p, () -> service.apply(p));
                     }
                 }
                 player.sendMessage(translator.get(TranslationKey.TAB_RELOADED));
@@ -115,7 +116,7 @@ public final class TabModule {
         plugin.getServer().getPluginManager().registerEvents(new TabListener(service, disabled), plugin);
         for (org.bukkit.entity.Player player : plugin.getServer().getOnlinePlayers()) {
             if (!disabled.contains(player.getUniqueId())) {
-                service.apply(player);
+                ThreadRouter.owner(plugin, player, () -> service.apply(player));
             }
         }
         if (znCommand != null) {

@@ -13,6 +13,7 @@ import dev.zellys.nexus.ZellysNexus;
 import dev.zellys.nexus.common.dialog.DialogPalette;
 import dev.zellys.nexus.common.translation.TranslationKey;
 import dev.zellys.nexus.common.translation.Translator;
+import dev.zellys.nexus.thread.ThreadRouter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -42,19 +43,21 @@ public final class TabService {
                 Component.text(translator.get(TranslationKey.TAB_FOOTER, version),
                         TextColor.color(DialogPalette.TEXT_GRAY)));
         player.playerListName(Component.text(player.getName(), NamedTextColor.GRAY));
-        Team team = boardTeam(player);
-        team.color(NamedTextColor.GRAY);
-        team.addEntry(player.getName());
+        if (!ThreadRouter.REGIONIZED) {
+            Team team = boardTeam(player);
+            team.color(NamedTextColor.GRAY);
+            team.addEntry(player.getName());
+        }
         BossBar bar = BossBar.bossBar(
                 Component.text(translator.get(TranslationKey.TAB_HEADER),
                         TextColor.color(DialogPalette.PASTEL_BLUE)),
                 1.0f, BossBar.Color.BLUE, BossBar.Overlay.PROGRESS);
         bars.put(player.getUniqueId(), bar);
         player.showBossBar(bar);
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+        ThreadRouter.ownerLater(plugin, player, 200L, () -> {
             player.hideBossBar(bar);
             bars.remove(player.getUniqueId());
-        }, 200L);
+        });
     }
 
     public void remove(Player player) {

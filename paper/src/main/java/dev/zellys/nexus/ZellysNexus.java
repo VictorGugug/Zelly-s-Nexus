@@ -29,6 +29,7 @@ import dev.zellys.nexus.tab.TabModule;
 import dev.zellys.nexus.tab.TabService;
 import dev.zellys.nexus.command.ZnRootCommand;
 import dev.zellys.nexus.debug.DebugModule;
+import dev.zellys.nexus.thread.ThreadRouter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongSupplier;
@@ -36,7 +37,6 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
-import org.bukkit.scheduler.BukkitRunnable;
 
 public final class ZellysNexus extends JavaPlugin {
     private Translator translator;
@@ -95,20 +95,17 @@ public final class ZellysNexus extends JavaPlugin {
 
     private void checkForUpdates() {
         String version = getDescription().getVersion();
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                UpdateChecker.UpdateResult result = UpdateChecker.check(version, "VictorGugug/Zelly-s-Nexus",
-                        new GitHubTagSource("VictorGugug/Zelly-s-Nexus"));
-                if (result.status() == UpdateChecker.Status.UPDATE_AVAILABLE) {
-                    getLogger().info(translator.get(TranslationKey.UPDATE_AVAILABLE, result.latestVersion(), result.url()));
-                } else if (result.status() == UpdateChecker.Status.CHECK_FAILED) {
-                    getLogger().warning(translator.get(TranslationKey.UPDATE_CHECK_FAILED));
-                } else {
-                    getLogger().info(translator.get(TranslationKey.UPDATE_UPTODATE, version));
-                }
+        ThreadRouter.async(this, () -> {
+            UpdateChecker.UpdateResult result = UpdateChecker.check(version, "VictorGugug/Zelly-s-Nexus",
+                    new GitHubTagSource("VictorGugug/Zelly-s-Nexus"));
+            if (result.status() == UpdateChecker.Status.UPDATE_AVAILABLE) {
+                getLogger().info(translator.get(TranslationKey.UPDATE_AVAILABLE, result.latestVersion(), result.url()));
+            } else if (result.status() == UpdateChecker.Status.CHECK_FAILED) {
+                getLogger().warning(translator.get(TranslationKey.UPDATE_CHECK_FAILED));
+            } else {
+                getLogger().info(translator.get(TranslationKey.UPDATE_UPTODATE, version));
             }
-        }.runTaskAsynchronously(this);
+        });
     }
 
     @Override

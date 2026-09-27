@@ -11,6 +11,7 @@ package dev.zellys.nexus.essentials;
 
 import dev.zellys.nexus.ZellysNexus;
 import dev.zellys.nexus.common.translation.TranslationKey;
+import dev.zellys.nexus.thread.ThreadRouter;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -127,10 +128,7 @@ public final class EssentialsListener implements Listener {
         Player player = event.getPlayer();
         if (data.unlimited.contains(player.getUniqueId())) {
             ItemStack hand = event.getItemInHand();
-            // ponytail: Simple working solution - just give them back the item they placed.
-            org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
-                player.getInventory().addItem(new ItemStack(hand.getType(), 1));
-            });
+            ThreadRouter.ownerLater(plugin, player, 1L, () -> player.getInventory().addItem(new ItemStack(hand.getType(), 1)));
         }
     }
 }
