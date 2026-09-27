@@ -386,11 +386,13 @@ itemedit:
   reloaded: "Item storage reloaded."
 
 debug:
-  usage: "Usage: /zn debug <translation|auth|clans|files|all>."
+  usage: "Usage: /zn debug [translation|auth|clans|files|essentials|threads|world|all]."
   header: "Debug %s"
   pass: "PASS %s"
   fail: "FAIL %s: %s"
-  summary: "Debug done: %s passed, %s failed."
+  summary: "Debug done: %s passed, %s failed, %s total."
+  report_saved: "Debug report saved to %s."
+  report_failed: "Could not save the debug report: %s"
 
 int:
   perms_info: "%s: group '%s', prefix '%s', suffix '%s'"

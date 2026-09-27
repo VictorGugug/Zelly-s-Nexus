@@ -15,75 +15,147 @@ import dev.zellys.nexus.clans.ClanService;
 import dev.zellys.nexus.common.store.YamlStore;
 import dev.zellys.nexus.common.translation.TranslationKey;
 import dev.zellys.nexus.common.translation.Translator;
+import dev.zellys.nexus.thread.ThreadRouter;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.Server;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.jspecify.annotations.Nullable;
 
 final class DebugSubcommand implements BasicCommand {
+    private static final List<String> AREAS = List.of("translation", "auth", "clans", "files", "essentials", "threads", "world");
+    private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+    private final ZellysNexus plugin;
     private final Translator translator;
 
-    DebugSubcommand(Translator translator) {
-        this.translator = translator;
+    DebugSubcommand(ZellysNexus plugin) {
+        this.plugin = plugin;
+        this.translator = plugin.translator();
     }
 
     @Override
     public void execute(CommandSourceStack source, String[] args) {
         CommandSender sender = source.getSender();
-        if (args.length != 1) {
+        String area = args.length == 0 ? "all" : args[0].toLowerCase(Locale.ROOT);
+        if (args.length > 1 || (!area.equals("all") && !AREAS.contains(area))) {
             sender.sendMessage(translator.get(TranslationKey.DEBUG_USAGE));
             return;
         }
-        String area = args[0].toLowerCase();
-        List<String> areas = new ArrayList<>();
-        if (area.equals("all")) {
-            areas.add("translation");
-            areas.add("auth");
-            areas.add("clans");
-            areas.add("files");
-            areas.add("essentials");
-        } else if (area.equals("translation") || area.equals("auth") || area.equals("clans") || area.equals("files") || area.equals("essentials")) {
-            areas.add(area);
-        } else {
-            sender.sendMessage(translator.get(TranslationKey.DEBUG_USAGE));
-            return;
+        Map<String, CompletableFuture<List<String>>> runs = new LinkedHashMap<>();
+        for (String name : area.equals("all") ? AREAS : List.of(area)) {
+            runs.put(name, runArea(name, sender).orTimeout(10, TimeUnit.SECONDS).exceptionally(e -> List.of(e.toString())));
         }
+        CompletableFuture.allOf(runs.values().toArray(CompletableFuture[]::new)).thenRun(() -> report(sender, runs));
+    }
+
+    private void report(CommandSender sender, Map<String, CompletableFuture<List<String>>> runs) {
+        List<String> lines = new ArrayList<>();
         int passed = 0;
         int failed = 0;
-        for (String name : areas) {
-            sender.sendMessage(translator.get(TranslationKey.DEBUG_HEADER, name));
-            List<String> failures = runArea(name);
+        for (Map.Entry<String, CompletableFuture<List<String>>> run : runs.entrySet()) {
+            String name = run.getKey();
+            List<String> failures = run.getValue().join();
+            lines.add(translator.get(TranslationKey.DEBUG_HEADER, name));
             if (failures.isEmpty()) {
                 passed++;
-                sender.sendMessage(translator.get(TranslationKey.DEBUG_PASS, name));
+                lines.add(translator.get(TranslationKey.DEBUG_PASS, name));
             } else {
                 failed++;
                 for (String failure : failures) {
-                    sender.sendMessage(translator.get(TranslationKey.DEBUG_FAIL, name, failure));
+                    lines.add(translator.get(TranslationKey.DEBUG_FAIL, name, failure));
                 }
             }
         }
-        sender.sendMessage(translator.get(TranslationKey.DEBUG_SUMMARY, passed, failed));
+        lines.add(translator.get(TranslationKey.DEBUG_SUMMARY, passed, failed, passed + failed));
+        lines.forEach(sender::sendMessage);
+        ThreadRouter.async(plugin, () -> {
+            Path file = plugin.getDataFolder().toPath().resolve("debug").resolve("debug-" + STAMP.format(LocalDateTime.now()) + ".log");
+            try {
+                Files.createDirectories(file.getParent());
+                Files.write(file, lines);
+                sender.sendMessage(translator.get(TranslationKey.DEBUG_REPORT_SAVED, file));
+            } catch (IOException e) {
+                sender.sendMessage(translator.get(TranslationKey.DEBUG_REPORT_FAILED, e.getMessage()));
+            }
+        });
     }
 
-    private List<String> runArea(String area) {
+    private CompletableFuture<List<String>> runArea(String area, CommandSender sender) {
         return switch (area) {
-            case "translation" -> checkTranslation();
-            case "auth" -> checkAuth();
-            case "clans" -> checkClans();
-            case "files" -> checkFiles();
-            case "essentials" -> checkEssentials();
-            default -> List.of(area);
+            case "translation" -> CompletableFuture.completedFuture(checkTranslation());
+            case "auth" -> CompletableFuture.completedFuture(checkAuth());
+            case "clans" -> CompletableFuture.completedFuture(checkClans());
+            case "files" -> CompletableFuture.completedFuture(checkFiles());
+            case "essentials" -> CompletableFuture.completedFuture(checkEssentials());
+            case "threads" -> checkThreads();
+            case "world" -> checkWorld(sender);
+            default -> CompletableFuture.completedFuture(List.of(area));
         };
+    }
+
+    private CompletableFuture<List<String>> checkThreads() {
+        Server server = plugin.getServer();
+        Location spawn = server.getWorlds().get(0).getSpawnLocation();
+        CompletableFuture<List<String>> result = new CompletableFuture<>();
+        ThreadRouter.async(plugin, () -> {
+            List<String> failures = new ArrayList<>();
+            check(failures, "async-off-tick", !server.isGlobalTickThread() && !server.isOwnedByCurrentRegion(spawn));
+            ThreadRouter.global(plugin, () -> {
+                check(failures, "global", server.isGlobalTickThread());
+                result.complete(failures);
+            });
+        });
+        return result;
+    }
+
+    private CompletableFuture<List<String>> checkWorld(CommandSender sender) {
+        Location base = sender instanceof Player player ? player.getLocation() : plugin.getServer().getWorlds().get(0).getSpawnLocation();
+        World world = base.getWorld();
+        Location probe = new Location(world, base.getBlockX(), world.getMaxHeight() - 1, base.getBlockZ());
+        CompletableFuture<List<String>> result = new CompletableFuture<>();
+        world.getChunkAtAsync(probe).thenRun(() -> ThreadRouter.region(plugin, probe, () -> {
+            try {
+                List<String> failures = new ArrayList<>();
+                check(failures, "region-owner", plugin.getServer().isOwnedByCurrentRegion(probe));
+                Block block = probe.getBlock();
+                BlockData original = block.getBlockData();
+                Material marker = original.getMaterial() == Material.STONE ? Material.GLASS : Material.STONE;
+                try {
+                    block.setType(marker, false);
+                    check(failures, "block-set", block.getType() == marker);
+                } finally {
+                    block.setBlockData(original, false);
+                }
+                check(failures, "block-restored", block.getBlockData().equals(original));
+                result.complete(failures);
+            } catch (RuntimeException e) {
+                result.completeExceptionally(e);
+            }
+        }));
+        return result;
     }
 
     private List<String> checkTranslation() {
@@ -123,7 +195,7 @@ final class DebugSubcommand implements BasicCommand {
         } catch (Exception e) {
             failures.add(e.toString());
         } finally {
-            deleteTemp(temp);
+            deleteTemp(temp, failures);
         }
         return failures;
     }
@@ -147,7 +219,7 @@ final class DebugSubcommand implements BasicCommand {
         } catch (Exception e) {
             failures.add(e.toString());
         } finally {
-            deleteTemp(temp);
+            deleteTemp(temp, failures);
         }
         return failures;
     }
@@ -170,7 +242,7 @@ final class DebugSubcommand implements BasicCommand {
         } catch (Exception e) {
             failures.add(e.toString());
         } finally {
-            deleteTemp(temp);
+            deleteTemp(temp, failures);
         }
         return failures;
     }
@@ -205,7 +277,7 @@ final class DebugSubcommand implements BasicCommand {
         } catch (Exception e) {
             failures.add(e.toString());
         } finally {
-            deleteTemp(temp);
+            deleteTemp(temp, failures);
         }
         return failures;
     }
@@ -216,27 +288,25 @@ final class DebugSubcommand implements BasicCommand {
         }
     }
 
-    private static void deleteTemp(Path temp) {
+    private static void deleteTemp(Path temp, List<String> failures) {
         if (temp == null) {
             return;
         }
         try (var stream = Files.walk(temp)) {
-            stream.sorted(Comparator.reverseOrder()).forEach(path -> {
-                try {
-                    Files.deleteIfExists(path);
-                } catch (Exception ignored) {
-                }
-            });
-        } catch (Exception ignored) {
+            for (Path path : stream.sorted(Comparator.reverseOrder()).toList()) {
+                Files.deleteIfExists(path);
+            }
+        } catch (IOException e) {
+            failures.add("cleanup " + e);
         }
     }
 
     @Override
     public Collection<String> suggest(CommandSourceStack source, String[] args) {
         if (args.length <= 1) {
-            String partial = args.length == 1 ? args[0].toLowerCase() : "";
+            String partial = args.length == 1 ? args[0].toLowerCase(Locale.ROOT) : "";
             List<String> out = new ArrayList<>();
-            for (String area : List.of("translation", "auth", "clans", "files", "essentials", "all")) {
+            for (String area : Stream.concat(AREAS.stream(), Stream.of("all")).toList()) {
                 if (area.startsWith(partial)) {
                     out.add(area);
                 }
@@ -262,7 +332,7 @@ public final class DebugModule {
 
     public static long enable(ZellysNexus plugin, dev.zellys.nexus.command.ZnRootCommand znCommand) {
         long start = System.nanoTime();
-        DebugSubcommand cmd = new DebugSubcommand(plugin.translator());
+        DebugSubcommand cmd = new DebugSubcommand(plugin);
         if (znCommand != null) {
             znCommand.registerCommand("debug", "dbg", "zn.debug", null, cmd);
         }

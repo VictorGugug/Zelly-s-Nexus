@@ -381,6 +381,8 @@ public enum TranslationKey {
     DEBUG_PASS("debug.pass"),
     DEBUG_FAIL("debug.fail"),
     DEBUG_SUMMARY("debug.summary"),
+    DEBUG_REPORT_SAVED("debug.report_saved"),
+    DEBUG_REPORT_FAILED("debug.report_failed"),
 
     INT_PERMS_INFO("int.perms_info"),
     INT_PERMS_UNAVAILABLE("int.perms_unavailable"),

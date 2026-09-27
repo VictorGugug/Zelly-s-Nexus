@@ -386,11 +386,13 @@ itemedit:
   reloaded: "Almacén de objetos recargado."
 
 debug:
-  usage: "Uso: /zn debug <translation|auth|clans|files|all>."
+  usage: "Uso: /zn debug [translation|auth|clans|files|essentials|threads|world|all]."
   header: "Debug %s"
   pass: "OK %s"
   fail: "FALLO %s: %s"
-  summary: "Debug listo: %s bien, %s mal."
+  summary: "Debug listo: %s bien, %s mal, %s en total."
+  report_saved: "Informe de debug guardado en %s."
+  report_failed: "No se pudo guardar el informe de debug: %s"
 
 int:
   perms_info: "%s: grupo '%s', prefijo '%s', sufijo '%s'"
