@@ -121,7 +121,7 @@ jobs:
 
           ### Build and Test Status: Succeeded
           - All Gradle subprojects (:common, :paper) built and verified cleanly.
-          - Paper runtime and MockBukkit test suites executed without errors.
+          - JUnit test suites for :common and :paper executed without errors.
           EOF
 
       - name: Generate version commit summary

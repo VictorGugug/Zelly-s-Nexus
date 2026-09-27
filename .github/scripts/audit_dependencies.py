@@ -108,63 +108,29 @@ def fetch_github_release_or_tag(repo):
 
 
 def parse_gradle_build_files(repo_root):
-    """Dynamically extract declared dependency versions from build.gradle.kts files."""
+    """Extract the dependency versions declared in the Gradle build files."""
+    patterns = {
+        "paper": {
+            "shadow": r'id\("com\.gradleup\.shadow"\)\s*version\s*"([^"]+)"',
+            "run_paper": r'id\("xyz\.jpenilla\.run-paper"\)\s*version\s*"([^"]+)"',
+            "junit_bom": r'platform\("org\.junit:junit-bom:([^"]+)"\)',
+            "bcrypt": r'at\.favre\.lib:bcrypt:([^"]+)',
+        },
+        "common": {
+            "snakeyaml": r'org\.yaml:snakeyaml:([^"]+)',
+        },
+    }
     versions = {}
-    paper_path = os.path.join(repo_root, "paper", "build.gradle.kts")
-    if os.path.exists(paper_path):
-        with open(paper_path, "r", encoding="utf-8") as f:
+    for module, module_patterns in patterns.items():
+        path = os.path.join(repo_root, module, "build.gradle.kts")
+        if not os.path.exists(path):
+            continue
+        with open(path, "r", encoding="utf-8") as f:
             content = f.read()
-            m = re.search(r'id\("com\.gradleup\.shadow"\)\s*version\s*"([^"]+)"', content)
+        for key, pattern in module_patterns.items():
+            m = re.search(pattern, content)
             if m:
-                versions["shadow"] = m.group(1).strip()
-            m = re.search(r'id\("xyz\.jpenilla\.run-paper"\)\s*version\s*"([^"]+)"', content)
-            if m:
-                versions["run_paper"] = m.group(1).strip()
-            m = re.search(r'platform\("org\.junit:junit-bom:([^"]+)"\)', content)
-            if m:
-                versions["junit_bom"] = m.group(1).strip()
-            m = re.search(r'mockbukkit-v\d+\.\d+:([^"]+)', content)
-            if m:
-                versions["mockbukkit"] = m.group(1).strip()
-            m = re.search(r'mysql-connector-j:([^"]+)', content)
-            if m:
-                versions["mysql"] = m.group(1).strip()
-            m = re.search(r'floodgate:api:([^"]+)', content)
-            if m:
-                versions["floodgate"] = m.group(1).strip()
-            m = re.search(r'cumulus:cumulus:([^"]+)', content)
-            if m:
-                versions["cumulus"] = m.group(1).strip()
-            m = re.search(r'luckperms:api:([^"]+)', content)
-            if m:
-                versions["luckperms"] = m.group(1).strip()
-            m = re.search(r'caffeine:caffeine:([^"]+)', content)
-            if m:
-                versions["caffeine"] = m.group(1).strip()
-            m = re.search(r'commons-lang3:([^"]+)', content)
-            if m:
-                versions["commons_lang"] = m.group(1).strip()
-            m = re.search(r'bstats-bukkit:([^"]+)', content)
-            if m:
-                versions["bstats"] = m.group(1).strip()
-            m = re.search(r'FoliaLib:([^\s"]+)', content)
-            if m:
-                versions["folialib"] = m.group(1).strip()
-            m = re.search(r'HikariCP:([^"]+)', content)
-            if m:
-                versions["hikari"] = m.group(1).strip()
-            m = re.search(r'adventure-api:([^"]+)', content)
-            if m:
-                versions["adventure"] = m.group(1).strip()
-
-    common_path = os.path.join(repo_root, "common", "build.gradle.kts")
-    if os.path.exists(common_path):
-        with open(common_path, "r", encoding="utf-8") as f:
-            content = f.read()
-            m = re.search(r'org\.jetbrains:annotations:([^"]+)', content)
-            if m:
-                versions["annotations"] = m.group(1).strip()
-
+                versions[key] = m.group(1).strip()
     return versions
 
 
@@ -224,27 +190,17 @@ def main():
     gv = parse_gradle_build_files(REPO_ROOT)
 
     audit_targets = [
-        ("Plugin Integration", "LuckPerms", gv.get("luckperms", "5.5"), "github", "LuckPerms/LuckPerms"),
+        ("Plugin Integration", "LuckPerms", "5.5", "github", "LuckPerms/LuckPerms"),
         ("Plugin Integration", "Geyser", "2.7", "github", "GeyserMC/Geyser"),
-        ("Plugin Integration", "Floodgate API", gv.get("floodgate", "2.2.3-SNAPSHOT"), "maven", "https://repo.opencollab.dev/main/org/geysermc/floodgate/api/maven-metadata.xml"),
-        ("Plugin Integration", "Cumulus (Geyser)", gv.get("cumulus", "1.1.2"), "maven", "https://repo.opencollab.dev/main/org/geysermc/cumulus/cumulus/maven-metadata.xml"),
+        ("Plugin Integration", "Floodgate API", "2.2.3-SNAPSHOT", "maven", "https://repo.opencollab.dev/main/org/geysermc/floodgate/api/maven-metadata.xml"),
         ("Plugin Integration", "PlaceholderAPI", "2.12.3", "maven", "https://repo.extendedclip.com/content/repositories/placeholderapi/me/clip/placeholderapi/maven-metadata.xml"),
-        ("Plugin Integration", "ViaVersion", "5.12.0", "github", "ViaVersion/ViaVersion"),
 
-        ("Core Dependency", "FoliaLib", gv.get("folialib", "0.5.1"), "maven", "https://repo.tcoded.com/releases/com/tcoded/FoliaLib/maven-metadata.xml"),
-        ("Core Dependency", "HikariCP", gv.get("hikari", "7.1.0"), "maven", "https://repo1.maven.org/maven2/com/zaxxer/HikariCP/maven-metadata.xml"),
-        ("Core Dependency", "mysql-connector-j", gv.get("mysql", "26.7.0"), "maven", "https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/maven-metadata.xml"),
-        ("Core Dependency", "Caffeine", gv.get("caffeine", "3.2.4"), "maven", "https://repo1.maven.org/maven2/com/github/ben-manes/caffeine/caffeine/maven-metadata.xml"),
-        ("Core Dependency", "Commons Lang3", gv.get("commons_lang", "3.20.0"), "maven", "https://repo1.maven.org/maven2/org/apache/commons/commons-lang3/maven-metadata.xml"),
-        ("Core Dependency", "bStats Bukkit", gv.get("bstats", "3.2.1"), "maven", "https://repo1.maven.org/maven2/org/bstats/bstats-bukkit/maven-metadata.xml"),
-        ("Core Dependency", "Adventure API", gv.get("adventure", "5.2.0"), "maven", "https://repo1.maven.org/maven2/net/kyori/adventure-api/maven-metadata.xml"),
-        ("Core Dependency", "JetBrains Annotations", gv.get("annotations", "26.1.0"), "maven", "https://repo1.maven.org/maven2/org/jetbrains/annotations/maven-metadata.xml"),
-        ("Core Dependency", "BCrypt", "0.10.2", "maven", "https://repo1.maven.org/maven2/at/favre/lib/bcrypt/maven-metadata.xml"),
+        ("Core Dependency", "BCrypt", gv.get("bcrypt", "unknown"), "maven", "https://repo1.maven.org/maven2/at/favre/lib/bcrypt/maven-metadata.xml"),
+        ("Core Dependency", "SnakeYAML", gv.get("snakeyaml", "unknown"), "maven", "https://repo1.maven.org/maven2/org/yaml/snakeyaml/maven-metadata.xml"),
 
-        ("Build & Test", "JUnit BOM", gv.get("junit_bom", "6.1.3"), "maven", "https://repo1.maven.org/maven2/org/junit/junit-bom/maven-metadata.xml"),
-        ("Build & Test", "MockBukkit", gv.get("mockbukkit", "4.116.3"), "maven", "https://repo1.maven.org/maven2/org/mockbukkit/mockbukkit/mockbukkit-v1.21/maven-metadata.xml"),
-        ("Build & Test", "Shadow Plugin", gv.get("shadow", "9.6.1"), "maven", "https://plugins.gradle.org/m2/com/gradleup/shadow/com.gradleup.shadow.gradle.plugin/maven-metadata.xml"),
-        ("Build & Test", "Run-Paper Plugin", gv.get("run_paper", "3.0.2"), "maven", "https://plugins.gradle.org/m2/xyz/jpenilla/run-paper/xyz.jpenilla.run-paper.gradle.plugin/maven-metadata.xml"),
+        ("Build & Test", "JUnit BOM", gv.get("junit_bom", "unknown"), "maven", "https://repo1.maven.org/maven2/org/junit/junit-bom/maven-metadata.xml"),
+        ("Build & Test", "Shadow Plugin", gv.get("shadow", "unknown"), "maven", "https://plugins.gradle.org/m2/com/gradleup/shadow/com.gradleup.shadow.gradle.plugin/maven-metadata.xml"),
+        ("Build & Test", "Run-Paper Plugin", gv.get("run_paper", "unknown"), "maven", "https://plugins.gradle.org/m2/xyz/jpenilla/run-paper/xyz.jpenilla.run-paper.gradle.plugin/maven-metadata.xml"),
     ]
 
     print("Zellys Nexus Dependency and Integration Version Audit")

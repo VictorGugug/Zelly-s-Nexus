@@ -145,7 +145,7 @@ ess:
   tp_here: "%s teletransportado a ti."
   tp_override: "Teletransportado a %s."
   tp_pos: "Teletransportado a %s, %s, %s."
-  tp_random: "Teletransportado a una ubicación aleatoria."
+  tp_random: "Apareciste en un lugar nuevo de la naturaleza."
   tp_random_set: "Rango de teletransporte aleatorio: %s a %s."
   tp_toggle_on: "Peticiones de teletransporte activadas."
   tp_toggle_off: "Peticiones de teletransporte desactivadas."

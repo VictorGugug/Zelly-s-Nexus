@@ -145,7 +145,7 @@ ess:
   tp_here: "%s teleported to you."
   tp_override: "Teleported to %s."
   tp_pos: "Teleported to %s, %s, %s."
-  tp_random: "Teleported to a random location."
+  tp_random: "You landed somewhere new in the wild."
   tp_random_set: "Random teleport range set: %s to %s."
   tp_toggle_on: "Teleport requests enabled."
   tp_toggle_off: "Teleport requests disabled."

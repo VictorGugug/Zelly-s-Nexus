@@ -36,10 +36,6 @@ final class ItemEditSubcommand implements BasicCommand {
     private final ItemStorage storage;
     private final dev.zellys.nexus.dialog.DialogManager dialogs;
 
-    ItemEditSubcommand(Translator translator, ItemStorage storage) {
-        this(translator, storage, null);
-    }
-
     ItemEditSubcommand(Translator translator, ItemStorage storage, dev.zellys.nexus.dialog.DialogManager dialogs) {
         this.translator = translator;
         this.storage = storage;

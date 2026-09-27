@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 LANG = ROOT / "common" / "src" / "main" / "resources" / "lang"
 HEADER_LINES = ("This file is part of Zelly's Nexus", "PolyForm Noncommercial License 1.0.0")
 HEADER_TYPES = {".java", ".kts", ".py", ".yml", ".properties"}
-HEADER_EXEMPT = re.compile(r"^(gradle/wrapper/|\.github/ISSUE_TEMPLATE/)")
+HEADER_EXEMPT = re.compile(r"^gradle/wrapper/")
 TEXT_TYPES = HEADER_TYPES | {".md", ".txt"}
 BANNED = {
     chr(0x2014): "em dash",
