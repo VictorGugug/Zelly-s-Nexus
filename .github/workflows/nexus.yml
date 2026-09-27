@@ -223,24 +223,15 @@ jobs:
           fi
           echo "Version field integrity verified."
 
-      - name: Validate PolyForm Noncommercial license headers
-        run: |
-          echo "Verifying license headers on Java source files..."
-          FAILED=0
-          while IFS= read -r file; do
-            [ -z "$file" ] && continue
-            if [ -f "$file" ]; then
-              if ! grep -q "This file is part of Zelly's Nexus" "$file" || ! grep -q "PolyForm Noncommercial" "$file"; then
-                echo "ERROR: Missing required license header in: $file"
-                FAILED=1
-              fi
-            fi
-          done < <(find paper/src common/src -name "*.java" 2>/dev/null)
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
 
-          if [ "$FAILED" -ne 0 ]; then
-            exit 1
-          fi
-          echo "All Java source files preserve required license headers."
+      - name: Check headers, translations, YAML and typography
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 .github/scripts/check_sources.py
 
       - name: Validate absence of placeholder markers
         run: |
@@ -267,7 +258,7 @@ jobs:
           | :--- | :--- | :---: |
           | **Commit Convention** | `NEXUS:<branch>(<type>): <summary>` | Passed |
           | **Version Immutability** | `nexusVersion` / `versionSuffix` integrity | Passed |
-          | **License Compliance** | PolyForm Noncommercial header on all `.java` | Passed |
+          | **Source Checks** | Headers, translation parity, YAML syntax, typography | Passed |
           | **Code Integrity** | Zero placeholder markers (`TODO`, `FIXME`, `XXX`) | Passed |
           EOF
 
