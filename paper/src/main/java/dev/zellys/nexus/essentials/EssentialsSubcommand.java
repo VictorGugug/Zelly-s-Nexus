@@ -86,7 +86,7 @@ public final class EssentialsSubcommand implements BasicCommand {
             }
             case "sethome" -> {
                 String name = args.length > 1 ? args[1] : "home";
-                data.homesData.computeIfAbsent(player.getUniqueId().toString(), k -> new java.util.HashMap<>());
+                data.homesData.computeIfAbsent(player.getUniqueId().toString(), k -> new java.util.concurrent.ConcurrentHashMap<>());
                 @SuppressWarnings("unchecked")
                 java.util.Map<String, Object> userHomes = (java.util.Map<String, Object>) data.homesData.get(player.getUniqueId().toString());
                 userHomes.put(name, player.getLocation());
@@ -443,9 +443,16 @@ public final class EssentialsSubcommand implements BasicCommand {
             case "tpr" -> {
                 int x = data.tprMin + (int) (Math.random() * (data.tprMax - data.tprMin));
                 int z = data.tprMin + (int) (Math.random() * (data.tprMax - data.tprMin));
-                int y = player.getWorld().getHighestBlockYAt(x, z) + 1;
-                player.teleportAsync(new Location(player.getWorld(), x, y, z));
-                player.sendMessage(plugin.translator().get(TranslationKey.ESS_TP_RANDOM));
+                org.bukkit.World world = player.getWorld();
+                Location column = new Location(world, x, 0, z);
+                world.getChunkAtAsync(column).thenRun(() -> ThreadRouter.region(plugin, column, () -> {
+                    int y = world.getHighestBlockYAt(x, z) + 1;
+                    player.teleportAsync(new Location(world, x, y, z)).thenAccept(success -> {
+                        if (Boolean.TRUE.equals(success)) {
+                            player.sendMessage(plugin.translator().get(TranslationKey.ESS_TP_RANDOM));
+                        }
+                    });
+                }));
             }
             case "settpr" -> {
                 if (!player.hasPermission("zn.essentials.admin")) return;
@@ -596,7 +603,7 @@ public final class EssentialsSubcommand implements BasicCommand {
                         return;
                     }
                     String text = String.join(" ", java.util.Arrays.copyOfRange(args, 3, args.length));
-                    data.mail.computeIfAbsent(target.getUniqueId(), k -> new java.util.ArrayList<>()).add(player.getName() + ": " + text);
+                    data.mail.computeIfAbsent(target.getUniqueId(), k -> new java.util.concurrent.CopyOnWriteArrayList<>()).add(player.getName() + ": " + text);
                     data.saveMail();
                     player.sendMessage(plugin.translator().get(TranslationKey.ESS_MAIL_SENT, target.getName()));
                 } else {
@@ -796,7 +803,7 @@ public final class EssentialsSubcommand implements BasicCommand {
                         items.add(stack.clone());
                     }
                 }
-                data.kits.put(args[1].toLowerCase(), new EssentialsData.Kit(args[1], cooldown, items.toArray(new ItemStack[0]), new java.util.HashMap<>()));
+                data.kits.put(args[1].toLowerCase(), new EssentialsData.Kit(args[1], cooldown, items.toArray(new ItemStack[0]), new java.util.concurrent.ConcurrentHashMap<>()));
                 data.saveKits();
                 player.sendMessage(plugin.translator().get(TranslationKey.ESS_KIT_CREATED, args[1]));
             }

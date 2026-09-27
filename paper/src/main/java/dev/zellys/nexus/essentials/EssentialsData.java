@@ -11,6 +11,7 @@ package dev.zellys.nexus.essentials;
 
 import dev.zellys.nexus.ZellysNexus;
 import dev.zellys.nexus.common.store.YamlStore;
+import dev.zellys.nexus.common.translation.TranslationKey;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -22,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class EssentialsData {
     public final Map<UUID, Location> backLocations = new ConcurrentHashMap<>();
@@ -48,6 +50,7 @@ public final class EssentialsData {
     public final Map<String, Object> homesData = new ConcurrentHashMap<>();
     public final Map<String, Object> warpsData = new ConcurrentHashMap<>();
 
+    private final ZellysNexus plugin;
     private final YamlStore spawns;
     private final YamlStore homes;
     private final YamlStore warps;
@@ -73,6 +76,7 @@ public final class EssentialsData {
     }
 
     public EssentialsData(ZellysNexus plugin) {
+        this.plugin = plugin;
         this.spawns = new YamlStore(plugin.getDataFolder().toPath().resolve("spawn.yml"));
         this.homes = new YamlStore(plugin.getDataFolder().toPath().resolve("homes.yml"));
         this.warps = new YamlStore(plugin.getDataFolder().toPath().resolve("warps.yml"));
@@ -91,15 +95,17 @@ public final class EssentialsData {
         for (Map.Entry<String, Object> entry : spawns.load().entrySet()) {
             Location loc = decodeLocation(entry.getValue());
             if (loc != null) spawnData.put(entry.getKey(), loc);
+            else skipped(entry.getKey(), "spawn.yml");
         }
         
         homesData.clear();
         for (Map.Entry<String, Object> entry : homes.load().entrySet()) {
             if (entry.getValue() instanceof Map<?, ?> userHomes) {
-                Map<String, Object> decoded = new HashMap<>();
+                Map<String, Object> decoded = new ConcurrentHashMap<>();
                 for (Map.Entry<?, ?> homeEntry : userHomes.entrySet()) {
                     Location loc = decodeLocation(homeEntry.getValue());
                     if (loc != null) decoded.put(homeEntry.getKey().toString(), loc);
+                    else skipped(entry.getKey() + "." + homeEntry.getKey(), "homes.yml");
                 }
                 homesData.put(entry.getKey(), decoded);
             }
@@ -109,6 +115,7 @@ public final class EssentialsData {
         for (Map.Entry<String, Object> entry : warps.load().entrySet()) {
             Location loc = decodeLocation(entry.getValue());
             if (loc != null) warpsData.put(entry.getKey(), loc);
+            else skipped(entry.getKey(), "warps.yml");
         }
         
         Map<String, Object> jMap = jailsStore.load();
@@ -119,13 +126,13 @@ public final class EssentialsData {
         lastSeen.clear();
         for (Map.Entry<String, Object> entry : lastSeenStore.load().entrySet()) {
             if (entry.getValue() instanceof Number n) {
-                try { lastSeen.put(UUID.fromString(entry.getKey()), n.longValue()); } catch (Exception e) {}
+                try { lastSeen.put(UUID.fromString(entry.getKey()), n.longValue()); } catch (IllegalArgumentException e) { skipped(entry.getKey(), "lastseen.yml"); }
             }
         }
         nicknames.clear();
         for (Map.Entry<String, Object> entry : nicknamesStore.load().entrySet()) {
             if (entry.getValue() instanceof String s) {
-                try { nicknames.put(UUID.fromString(entry.getKey()), s); } catch (Exception e) {}
+                try { nicknames.put(UUID.fromString(entry.getKey()), s); } catch (IllegalArgumentException e) { skipped(entry.getKey(), "nicknames.yml"); }
             }
         }
         
@@ -133,6 +140,7 @@ public final class EssentialsData {
             for (Map.Entry<String, Object> entry : jMap.entrySet()) {
                 Location loc = decodeLocation(entry.getValue());
                 if (loc != null) jails.put(entry.getKey(), loc);
+                else skipped(entry.getKey(), "jails.yml");
             }
         }
     }
@@ -163,10 +171,12 @@ public final class EssentialsData {
                     ItemStack stack = decodeItem(o);
                     if (stack != null) {
                         items.add(stack);
+                    } else {
+                        skipped(entry.getKey() + ".items", "kits.yml");
                     }
                 }
             }
-            kits.put(entry.getKey().toLowerCase(), new Kit(entry.getKey(), cooldown, items.toArray(new ItemStack[0]), new HashMap<>()));
+            kits.put(entry.getKey().toLowerCase(), new Kit(entry.getKey(), cooldown, items.toArray(new ItemStack[0]), new ConcurrentHashMap<>()));
         }
     }
 
@@ -193,7 +203,7 @@ public final class EssentialsData {
         for (Map.Entry<String, Object> entry : root.entrySet()) {
             try {
                 UUID id = UUID.fromString(entry.getKey());
-                List<String> inbox = new ArrayList<>();
+                List<String> inbox = new CopyOnWriteArrayList<>();
                 if (entry.getValue() instanceof Iterable<?> raw) {
                     for (Object o : raw) {
                         if (o instanceof String line) {
@@ -204,7 +214,8 @@ public final class EssentialsData {
                 if (!inbox.isEmpty()) {
                     mail.put(id, inbox);
                 }
-            } catch (IllegalArgumentException ignored) {
+            } catch (IllegalArgumentException e) {
+                skipped(entry.getKey(), "mail.yml");
             }
         }
     }
@@ -225,7 +236,8 @@ public final class EssentialsData {
                 if (entry.getValue() instanceof String jail) {
                     jailed.put(id, jail);
                 }
-            } catch (IllegalArgumentException ignored) {
+            } catch (IllegalArgumentException e) {
+                skipped(entry.getKey(), "jailed.yml");
             }
         }
     }
@@ -250,7 +262,7 @@ public final class EssentialsData {
                 return ItemStack.deserialize((Map<String, Object>) raw);
             }
             return null;
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | ClassCastException e) {
             return null;
         }
     }
@@ -277,9 +289,15 @@ public final class EssentialsData {
                 float yaw = ((Number) lmap.get("yaw")).floatValue();
                 float pitch = ((Number) lmap.get("pitch")).floatValue();
                 return new Location(w, x, y, z, yaw, pitch);
-            } catch (Exception ignored) {}
+            } catch (ClassCastException | NullPointerException e) {
+                return null;
+            }
         }
         return null;
+    }
+
+    private void skipped(String entry, String file) {
+        plugin.getLogger().warning(plugin.translator().get(TranslationKey.STORE_SKIPPED, entry, file));
     }
 
     @SuppressWarnings("unchecked")

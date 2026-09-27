@@ -24,14 +24,14 @@ public final class ItemStorage {
         this.store = new YamlStore(pluginDir.resolve("items.yml"));
     }
 
-    public void save(String key, ItemStack item) {
+    public synchronized void save(String key, ItemStack item) {
         Map<String, Object> data = store.load();
         byte[] bytes = item.serializeAsBytes();
         data.put(key, Base64.getEncoder().encodeToString(bytes));
         store.save(data);
     }
 
-    public ItemStack get(String key) {
+    public synchronized ItemStack get(String key) {
         Map<String, Object> data = store.load();
         Object val = data.get(key);
         if (val instanceof String str) {
@@ -44,7 +44,7 @@ public final class ItemStorage {
         return null;
     }
 
-    public boolean delete(String key) {
+    public synchronized boolean delete(String key) {
         Map<String, Object> data = store.load();
         if (data.containsKey(key)) {
             data.remove(key);
@@ -54,7 +54,7 @@ public final class ItemStorage {
         return false;
     }
 
-    public Set<String> list() {
+    public synchronized Set<String> list() {
         return store.load().keySet();
     }
 }

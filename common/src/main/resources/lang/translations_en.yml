@@ -402,3 +402,6 @@ int:
   bedrock_unavailable: "Floodgate not available."
   reloaded: "Integrations reloaded."
   usage: "Usage: /zn int <perms|bedrock|reload> [player]."
+
+store:
+  skipped: "Skipped unreadable entry %s in %s."

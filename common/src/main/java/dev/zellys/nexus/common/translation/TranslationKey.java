@@ -26,6 +26,7 @@ public enum TranslationKey {
     UPDATE_CHECK_FAILED("update.check_failed"),
     UPDATE_UPTODATE("update.uptodate"),
     PLUGIN_DISABLED("plugin.disabled"),
+    STORE_SKIPPED("store.skipped"),
 
     CMD_PLAYER_ONLY("cmd.player_only"),
     CMD_NO_PERMISSION("cmd.no_permission"),

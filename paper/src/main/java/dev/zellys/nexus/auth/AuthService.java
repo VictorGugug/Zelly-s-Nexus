@@ -66,7 +66,7 @@ public final class AuthService {
         loadUsers();
     }
 
-    public void reload() {
+    public synchronized void reload() {
         users.clear();
         sessions.clear();
         loadUsers();
@@ -84,11 +84,11 @@ public final class AuthService {
         }
     }
 
-    public boolean hasAccount(UUID uuid) {
+    public synchronized boolean hasAccount(UUID uuid) {
         return users.containsKey(uuid.toString());
     }
 
-    public AuthResult register(UUID uuid, String ip, String password) {
+    public synchronized AuthResult register(UUID uuid, String ip, String password) {
         if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
             return AuthResult.SHORT_PASSWORD;
         }
@@ -109,7 +109,7 @@ public final class AuthService {
         return AuthResult.OK;
     }
 
-    public AuthResult login(UUID uuid, String ip, String password) {
+    public synchronized AuthResult login(UUID uuid, String ip, String password) {
         Map<String, Object> data = users.get(uuid.toString());
         if (data == null) {
             return AuthResult.NOT_REGISTERED;
@@ -124,12 +124,12 @@ public final class AuthService {
         return AuthResult.OK;
     }
 
-    public void logout(UUID uuid) {
+    public synchronized void logout(UUID uuid) {
         sessions.remove(uuid);
         lastIp.remove(uuid);
     }
 
-    public AuthResult unregister(UUID uuid, String password) {
+    public synchronized AuthResult unregister(UUID uuid, String password) {
         Map<String, Object> data = users.get(uuid.toString());
         if (data == null) {
             return AuthResult.NOT_REGISTERED;
@@ -144,7 +144,7 @@ public final class AuthService {
         return AuthResult.OK;
     }
 
-    public AuthResult resetPassword(UUID uuid, String newPassword) {
+    public synchronized AuthResult resetPassword(UUID uuid, String newPassword) {
         Map<String, Object> data = users.get(uuid.toString());
         if (data == null) {
             return AuthResult.NOT_REGISTERED;
@@ -157,7 +157,7 @@ public final class AuthService {
         return AuthResult.OK;
     }
 
-    public AuthResult deleteAccount(UUID target) {
+    public synchronized AuthResult deleteAccount(UUID target) {
         if (users.remove(target.toString()) == null) {
             return AuthResult.NOT_REGISTERED;
         }
@@ -166,7 +166,7 @@ public final class AuthService {
         return AuthResult.OK;
     }
 
-    public AuthResult changePassword(UUID uuid, String oldPassword, String newPassword) {
+    public synchronized AuthResult changePassword(UUID uuid, String oldPassword, String newPassword) {
         Map<String, Object> data = users.get(uuid.toString());
         if (data == null) {
             return AuthResult.NOT_REGISTERED;
@@ -183,7 +183,7 @@ public final class AuthService {
         return AuthResult.OK;
     }
 
-    public void setEmail(UUID uuid, String email) {
+    public synchronized void setEmail(UUID uuid, String email) {
         Map<String, Object> data = users.get(uuid.toString());
         if (data != null) {
             data.put("email", email);
@@ -191,12 +191,12 @@ public final class AuthService {
         }
     }
 
-    public String getEmail(UUID uuid) {
+    public synchronized String getEmail(UUID uuid) {
         Map<String, Object> data = users.get(uuid.toString());
         return data != null && data.get("email") instanceof String ? (String) data.get("email") : null;
     }
 
-    public String setupTotp(UUID uuid) {
+    public synchronized String setupTotp(UUID uuid) {
         SecureRandom random = new SecureRandom();
         byte[] bytes = new byte[20];
         random.nextBytes(bytes);
@@ -205,7 +205,7 @@ public final class AuthService {
         return secret;
     }
 
-    public boolean confirmTotp(UUID uuid, String code) {
+    public synchronized boolean confirmTotp(UUID uuid, String code) {
         String secret = pendingTotp.get(uuid);
         if (secret != null && verifyTotp(secret, code)) {
             Map<String, Object> data = users.get(uuid.toString());
@@ -219,7 +219,7 @@ public final class AuthService {
         return false;
     }
 
-    public void disableTotp(UUID uuid) {
+    public synchronized void disableTotp(UUID uuid) {
         Map<String, Object> data = users.get(uuid.toString());
         if (data != null) {
             data.remove("totp");
@@ -227,7 +227,7 @@ public final class AuthService {
         }
     }
 
-    public String generateOtp(UUID uuid) {
+    public synchronized String generateOtp(UUID uuid) {
         SecureRandom random = new SecureRandom();
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         StringBuilder sb = new StringBuilder(8);
@@ -239,7 +239,7 @@ public final class AuthService {
         return code;
     }
 
-    public boolean verifyOtp(UUID uuid, String code) {
+    public synchronized boolean verifyOtp(UUID uuid, String code) {
         OtpData data = otpData.get(uuid);
         if (data != null && data.code.equals(code) && Instant.now().getEpochSecond() <= data.expiry) {
             otpData.remove(uuid);
@@ -248,7 +248,7 @@ public final class AuthService {
         return false;
     }
 
-    public String issueCaptcha(UUID uuid) {
+    public synchronized String issueCaptcha(UUID uuid) {
         SecureRandom random = new SecureRandom();
         String chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
         StringBuilder sb = new StringBuilder(4);
@@ -261,7 +261,7 @@ public final class AuthService {
         return code;
     }
 
-    public boolean answerCaptcha(UUID uuid, String code) {
+    public synchronized boolean answerCaptcha(UUID uuid, String code) {
         String pending = pendingCaptcha.get(uuid);
         if (pending != null && pending.equalsIgnoreCase(code)) {
             pendingCaptcha.remove(uuid);
@@ -271,11 +271,11 @@ public final class AuthService {
         return false;
     }
 
-    public boolean hasPassedCaptcha(UUID uuid) {
+    public synchronized boolean hasPassedCaptcha(UUID uuid) {
         return captchaPassed.contains(uuid);
     }
 
-    public String issueVerification(UUID uuid) {
+    public synchronized String issueVerification(UUID uuid) {
         SecureRandom random = new SecureRandom();
         StringBuilder sb = new StringBuilder(6);
         for (int i = 0; i < 6; i++) {
@@ -287,7 +287,7 @@ public final class AuthService {
         return code;
     }
 
-    public boolean confirmVerification(UUID uuid, String code) {
+    public synchronized boolean confirmVerification(UUID uuid, String code) {
         String pending = pendingVerification.get(uuid);
         if (pending != null && pending.equals(code)) {
             pendingVerification.remove(uuid);
@@ -297,11 +297,11 @@ public final class AuthService {
         return false;
     }
 
-    public boolean isVerified(UUID uuid) {
+    public synchronized boolean isVerified(UUID uuid) {
         return verified.contains(uuid);
     }
 
-    public void setPin(UUID uuid, String pin) {
+    public synchronized void setPin(UUID uuid, String pin) {
         Map<String, Object> data = users.get(uuid.toString());
         if (data != null) {
             data.put("pin", BCrypt.withDefaults().hashToString(10, pin.toCharArray()));
@@ -309,7 +309,7 @@ public final class AuthService {
         }
     }
 
-    public boolean verifyPin(UUID uuid, String pin) {
+    public synchronized boolean verifyPin(UUID uuid, String pin) {
         Map<String, Object> data = users.get(uuid.toString());
         if (data != null && data.get("pin") instanceof String hash) {
             return BCrypt.verifyer().verify(pin.toCharArray(), hash.toCharArray()).verified;
@@ -317,7 +317,7 @@ public final class AuthService {
         return false;
     }
 
-    public void resetPin(UUID uuid) {
+    public synchronized void resetPin(UUID uuid) {
         Map<String, Object> data = users.get(uuid.toString());
         if (data != null) {
             data.remove("pin");
@@ -325,7 +325,7 @@ public final class AuthService {
         }
     }
 
-    public void setRemember(UUID uuid, boolean remember) {
+    public synchronized void setRemember(UUID uuid, boolean remember) {
         Map<String, Object> data = users.get(uuid.toString());
         if (data != null) {
             data.put("remember", remember);
@@ -333,20 +333,20 @@ public final class AuthService {
         }
     }
 
-    public boolean isRemembered(UUID uuid) {
+    public synchronized boolean isRemembered(UUID uuid) {
         Map<String, Object> data = users.get(uuid.toString());
         return data != null && Boolean.TRUE.equals(data.get("remember"));
     }
 
-    public void setPremium(UUID uuid) {
+    public synchronized void setPremium(UUID uuid) {
         setMode(uuid, "premium");
     }
 
-    public void setCracked(UUID uuid) {
+    public synchronized void setCracked(UUID uuid) {
         setMode(uuid, "cracked");
     }
 
-    public void setFreemium(UUID uuid) {
+    public synchronized void setFreemium(UUID uuid) {
         setMode(uuid, "auto");
     }
 
@@ -359,7 +359,7 @@ public final class AuthService {
     }
 
     @SuppressWarnings("unchecked")
-    public List<String> getLogs(UUID uuid) {
+    public synchronized List<String> getLogs(UUID uuid) {
         Map<String, Object> data = users.get(uuid.toString());
         if (data != null && data.get("logs") instanceof List) {
             return (List<String>) data.get("logs");
@@ -368,7 +368,7 @@ public final class AuthService {
     }
 
     @SuppressWarnings("unchecked")
-    public void addLog(UUID uuid, String ip, String action) {
+    public synchronized void addLog(UUID uuid, String ip, String action) {
         Map<String, Object> data = users.get(uuid.toString());
         if (data != null) {
             List<String> logs;
@@ -384,7 +384,7 @@ public final class AuthService {
         }
     }
 
-    public int purgeInactive(long daysOld) {
+    public synchronized int purgeInactive(long daysOld) {
         long cutoff = Instant.now().getEpochSecond() - (daysOld * 86400);
         int purged = 0;
         List<String> toRemove = new ArrayList<>();
@@ -404,7 +404,7 @@ public final class AuthService {
         return purged;
     }
 
-    public void forceLogin(UUID uuid, String ip) {
+    public synchronized void forceLogin(UUID uuid, String ip) {
         if (hasAccount(uuid)) {
             authenticate(uuid, ip);
         }
@@ -418,7 +418,7 @@ public final class AuthService {
         return name != null && !uuid.equals(offlineUuid(name));
     }
 
-    public String accountMode(UUID uuid) {
+    public synchronized String accountMode(UUID uuid) {
         Map<String, Object> data = users.get(uuid.toString());
         if (data != null && data.get("mode") instanceof String mode) {
             return mode;
@@ -426,7 +426,7 @@ public final class AuthService {
         return "auto";
     }
 
-    public boolean autoLoginIfPremium(UUID uuid, String name, String ip) {
+    public synchronized boolean autoLoginIfPremium(UUID uuid, String name, String ip) {
         if (!hasAccount(uuid) || isAuthed(uuid, ip)) {
             return isAuthed(uuid, ip);
         }
@@ -447,7 +447,7 @@ public final class AuthService {
         return false;
     }
 
-    public boolean isAuthed(UUID uuid, String ip) {
+    public synchronized boolean isAuthed(UUID uuid, String ip) {
         if (isRemembered(uuid) && ip.equals(users.get(uuid.toString()).get("ip"))) {
             return true;
         }

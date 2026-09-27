@@ -170,7 +170,10 @@ final class ItemEditSubcommand implements BasicCommand {
                 if (args.length >= 5) {
                     try {
                         amount = Integer.parseInt(args[4]);
-                    } catch (NumberFormatException ignored) {}
+                    } catch (NumberFormatException e) {
+                        player.sendMessage(translator.get(TranslationKey.ITEMEDIT_USAGE));
+                        return;
+                    }
                 }
                 retrieved.setAmount(amount);
                 Player receiver = target;

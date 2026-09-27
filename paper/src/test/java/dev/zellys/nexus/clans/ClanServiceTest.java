@@ -19,6 +19,9 @@ import dev.zellys.nexus.clans.ClanService.ClanResult;
 import dev.zellys.nexus.common.store.YamlStore;
 import java.nio.file.Path;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -107,5 +110,21 @@ public final class ClanServiceTest {
         assertEquals(ClanResult.BANNED, service.banPlayer(member));
         assertEquals(ClanResult.UNBANNED, service.unbanPlayer(member));
         assertEquals(ClanResult.RANK_DELETED, service.deleteRank(owner, "Elder"));
+    }
+
+    @Test
+    void concurrentCreatesKeepEveryClan() throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(8);
+        for (int t = 0; t < 8; t++) {
+            int thread = t;
+            pool.submit(() -> {
+                for (int i = 0; i < 25; i++) {
+                    service.create(UUID.randomUUID(), "Clan" + thread + "x" + i);
+                }
+            });
+        }
+        pool.shutdown();
+        assertTrue(pool.awaitTermination(60, TimeUnit.SECONDS));
+        assertEquals(200, service.listClans().size());
     }
 }

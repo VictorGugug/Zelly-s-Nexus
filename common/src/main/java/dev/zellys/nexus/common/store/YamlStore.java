@@ -36,7 +36,7 @@ public final class YamlStore {
             Map<String, Object> data = yaml.load(reader);
             return data == null ? new HashMap<>() : new HashMap<>(data);
         } catch (IOException e) {
-            return new HashMap<>();
+            throw new UncheckedIOException(e);
         }
     }
 

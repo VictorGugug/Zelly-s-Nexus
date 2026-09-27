@@ -15,6 +15,8 @@ import org.bukkit.Location;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -42,18 +44,18 @@ public final class ClanService {
         public String locale = "en";
         public int warsWon = 0;
 
-        public final Set<String> members = new HashSet<>();
-        public final Set<String> allies = new HashSet<>();
-        public final Set<String> rivals = new HashSet<>();
-        public final Set<String> wars = new HashSet<>();
-        public final Set<String> trusted = new HashSet<>();
-        public final Set<String> muted = new HashSet<>();
+        public final Set<String> members = ConcurrentHashMap.newKeySet();
+        public final Set<String> allies = ConcurrentHashMap.newKeySet();
+        public final Set<String> rivals = ConcurrentHashMap.newKeySet();
+        public final Set<String> wars = ConcurrentHashMap.newKeySet();
+        public final Set<String> trusted = ConcurrentHashMap.newKeySet();
+        public final Set<String> muted = ConcurrentHashMap.newKeySet();
 
-        public final Map<String, String> ranks = new HashMap<>();
-        public final Map<String, String> memberRanks = new HashMap<>();
-        public final Map<String, Integer> kills = new HashMap<>();
-        public final Map<String, Integer> deaths = new HashMap<>();
-        public final List<String> bulletinBoard = new ArrayList<>();
+        public final Map<String, String> ranks = new ConcurrentHashMap<>();
+        public final Map<String, String> memberRanks = new ConcurrentHashMap<>();
+        public final Map<String, Integer> kills = new ConcurrentHashMap<>();
+        public final Map<String, Integer> deaths = new ConcurrentHashMap<>();
+        public final List<String> bulletinBoard = new CopyOnWriteArrayList<>();
 
         Clan(String name, String owner) {
             this.name = name;
@@ -211,7 +213,7 @@ public final class ClanService {
         store.save(root);
     }
 
-    public ClanResult create(UUID owner, String name) {
+    public synchronized ClanResult create(UUID owner, String name) {
         if (name == null || !NAME_PATTERN.matcher(name).matches()) return ClanResult.BAD_NAME;
         if (clans.containsKey(name.toLowerCase())) return ClanResult.EXISTS;
         if (clanOf(owner) != null) return ClanResult.ALREADY;
@@ -223,7 +225,7 @@ public final class ClanService {
         return ClanResult.OK;
     }
 
-    public ClanResult invite(UUID owner, UUID target) {
+    public synchronized ClanResult invite(UUID owner, UUID target) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, owner)) return ClanResult.NOT_LEADER;
@@ -234,7 +236,7 @@ public final class ClanService {
         return ClanResult.OK;
     }
 
-    public ClanResult accept(UUID target) {
+    public synchronized ClanResult accept(UUID target) {
         Invite invite = invites.get(target);
         if (invite == null || invite.expiry < Instant.now().getEpochSecond()) {
             invites.remove(target);
@@ -255,7 +257,7 @@ public final class ClanService {
         return ClanResult.OK;
     }
 
-    public ClanResult kick(UUID owner, UUID target) {
+    public synchronized ClanResult kick(UUID owner, UUID target) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, owner)) return ClanResult.NOT_LEADER;
@@ -265,7 +267,7 @@ public final class ClanService {
         return ClanResult.OK;
     }
 
-    public ClanResult leave(UUID member) {
+    public synchronized ClanResult leave(UUID member) {
         Clan clan = clanOf(member);
         if (clan == null) return ClanResult.NO_CLAN;
         if (clan.owner.equals(member.toString())) return ClanResult.OWNER_LEAVE;
@@ -274,7 +276,7 @@ public final class ClanService {
         return ClanResult.OK;
     }
 
-    public ClanResult disband(UUID owner) {
+    public synchronized ClanResult disband(UUID owner) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!clan.owner.equals(owner.toString())) return ClanResult.NOT_OWNER;
@@ -284,8 +286,8 @@ public final class ClanService {
         return ClanResult.OK;
     }
 
-    public ClanResult ally(UUID owner, String name) { return relate(owner, name, true); }
-    public ClanResult rival(UUID owner, String name) { return relate(owner, name, false); }
+    public synchronized ClanResult ally(UUID owner, String name) { return relate(owner, name, true); }
+    public synchronized ClanResult rival(UUID owner, String name) { return relate(owner, name, false); }
 
     private ClanResult relate(UUID owner, String name, boolean ally) {
         Clan clan = clanOf(owner);
@@ -305,7 +307,7 @@ public final class ClanService {
         return ClanResult.OK;
     }
 
-    public ClanResult unally(UUID owner, String name) {
+    public synchronized ClanResult unally(UUID owner, String name) {
         Clan clan = clanOf(owner);
         if (clan != null && isLeader(clan, owner)) {
             Clan other = clans.get(name.toLowerCase());
@@ -316,7 +318,7 @@ public final class ClanService {
         return ClanResult.NOT_LEADER;
     }
 
-    public ClanResult unrival(UUID owner, String name) {
+    public synchronized ClanResult unrival(UUID owner, String name) {
         Clan clan = clanOf(owner);
         if (clan != null && isLeader(clan, owner)) {
             Clan other = clans.get(name.toLowerCase());
@@ -328,7 +330,7 @@ public final class ClanService {
     }
 
 
-    public Clan clanOf(UUID member) {
+    public synchronized Clan clanOf(UUID member) {
         for (Clan clan : clans.values()) {
             if (clan.members.contains(member.toString())) return clan;
         }
@@ -343,7 +345,7 @@ public final class ClanService {
         return perms != null && (perms.contains("leader") || perms.contains("admin"));
     }
 
-    public ClanResult war(UUID owner, String targetClan, boolean start) {
+    public synchronized ClanResult war(UUID owner, String targetClan, boolean start) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, owner)) return ClanResult.NOT_LEADER;
@@ -366,7 +368,7 @@ public final class ClanService {
         }
     }
 
-    public ClanResult setRank(UUID owner, UUID target, String rankName) {
+    public synchronized ClanResult setRank(UUID owner, UUID target, String rankName) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, owner)) return ClanResult.NOT_LEADER;
@@ -381,7 +383,7 @@ public final class ClanService {
         return ClanResult.RANK_SET;
     }
 
-    public ClanResult createRank(UUID owner, String name) {
+    public synchronized ClanResult createRank(UUID owner, String name) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, owner)) return ClanResult.NOT_LEADER;
@@ -390,7 +392,7 @@ public final class ClanService {
         return ClanResult.RANK_CREATED;
     }
 
-    public ClanResult deleteRank(UUID owner, String name) {
+    public synchronized ClanResult deleteRank(UUID owner, String name) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, owner)) return ClanResult.NOT_LEADER;
@@ -400,13 +402,13 @@ public final class ClanService {
         return ClanResult.RANK_DELETED;
     }
 
-    public List<String> listRanks(UUID member) {
+    public synchronized List<String> listRanks(UUID member) {
         Clan clan = clanOf(member);
         if (clan == null) return null;
         return new ArrayList<>(clan.ranks.keySet());
     }
 
-    public ClanResult setHome(UUID owner, Location loc) {
+    public synchronized ClanResult setHome(UUID owner, Location loc) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, owner)) return ClanResult.NOT_LEADER;
@@ -415,12 +417,12 @@ public final class ClanService {
         return ClanResult.HOME_SET;
     }
 
-    public Location getHome(UUID member) {
+    public synchronized Location getHome(UUID member) {
         Clan clan = clanOf(member);
         return clan != null ? clan.home : null;
     }
 
-    public ClanResult setDescription(UUID owner, String desc) {
+    public synchronized ClanResult setDescription(UUID owner, String desc) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, owner)) return ClanResult.NOT_LEADER;
@@ -429,7 +431,7 @@ public final class ClanService {
         return ClanResult.DESC_SET;
     }
 
-    public ClanResult verify(String clanName) {
+    public synchronized ClanResult verify(String clanName) {
         Clan clan = clans.get(clanName.toLowerCase());
         if (clan == null) return ClanResult.UNKNOWN_CLAN;
         clan.verified = true;
@@ -437,7 +439,7 @@ public final class ClanService {
         return ClanResult.VERIFIED;
     }
 
-    public ClanResult banPlayer(UUID target) {
+    public synchronized ClanResult banPlayer(UUID target) {
         banned.add(target.toString());
         Clan c = clanOf(target);
         if (c != null) {
@@ -447,13 +449,13 @@ public final class ClanService {
         return ClanResult.BANNED;
     }
 
-    public ClanResult unbanPlayer(UUID target) {
+    public synchronized ClanResult unbanPlayer(UUID target) {
         banned.remove(target.toString());
         persist();
         return ClanResult.UNBANNED;
     }
 
-    public ClanResult setFriendlyFire(UUID owner, boolean on) {
+    public synchronized ClanResult setFriendlyFire(UUID owner, boolean on) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, owner)) return ClanResult.NOT_LEADER;
@@ -462,13 +464,13 @@ public final class ClanService {
         return ClanResult.FF_TOGGLED;
     }
 
-    public void setPersonalFf(UUID member, boolean on) {
+    public synchronized void setPersonalFf(UUID member, boolean on) {
         if (on) personalFfOff.remove(member.toString());
         else personalFfOff.add(member.toString());
         persist();
     }
 
-    public ClanResult postBulletin(UUID member, String msg) {
+    public synchronized ClanResult postBulletin(UUID member, String msg) {
         Clan clan = clanOf(member);
         if (clan == null) return ClanResult.NO_CLAN;
         if (clan.bulletinBoard.size() >= 10) clan.bulletinBoard.remove(0);
@@ -477,12 +479,12 @@ public final class ClanService {
         return ClanResult.BB_POSTED;
     }
 
-    public List<String> getBulletins(UUID member) {
+    public synchronized List<String> getBulletins(UUID member) {
         Clan clan = clanOf(member);
         return clan == null ? Collections.emptyList() : new ArrayList<>(clan.bulletinBoard);
     }
 
-    public String getStats(String clanName) {
+    public synchronized String getStats(String clanName) {
         Clan clan = clans.get(clanName.toLowerCase());
         if (clan == null) return null;
         int k = clan.kills.values().stream().mapToInt(Integer::intValue).sum();
@@ -490,7 +492,7 @@ public final class ClanService {
         return k + " Kills / " + d + " Deaths / " + clan.warsWon + " Wars Won";
     }
 
-    public String getRoster(String clanName) {
+    public synchronized String getRoster(String clanName) {
         Clan clan = clans.get(clanName.toLowerCase());
         if (clan == null) return null;
         List<String> names = new ArrayList<>();
@@ -515,11 +517,11 @@ public final class ClanService {
         return String.join(", ", names);
     }
 
-    public List<Clan> listClans() {
+    public synchronized List<Clan> listClans() {
         return new ArrayList<>(clans.values());
     }
 
-    public String lookupPlayer(UUID target) {
+    public synchronized String lookupPlayer(UUID target) {
         Clan clan = clanOf(target);
         if (clan == null) return null;
         String r = clan.memberRanks.getOrDefault(target.toString(), "Member");
@@ -527,7 +529,7 @@ public final class ClanService {
         return clan.name + " (" + r + ")";
     }
 
-    public ClanResult trust(UUID owner, UUID target) {
+    public synchronized ClanResult trust(UUID owner, UUID target) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, owner)) return ClanResult.NOT_LEADER;
@@ -536,7 +538,7 @@ public final class ClanService {
         return ClanResult.TRUSTED;
     }
 
-    public ClanResult untrust(UUID owner, UUID target) {
+    public synchronized ClanResult untrust(UUID owner, UUID target) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, owner)) return ClanResult.NOT_LEADER;
@@ -545,7 +547,7 @@ public final class ClanService {
         return ClanResult.UNTRUSTED;
     }
 
-    public ClanResult muteMember(UUID owner, UUID target) {
+    public synchronized ClanResult muteMember(UUID owner, UUID target) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, owner)) return ClanResult.NOT_LEADER;
@@ -555,7 +557,7 @@ public final class ClanService {
         return ClanResult.MEMBER_MUTED;
     }
 
-    public ClanResult setBanner(UUID owner, String serialized) {
+    public synchronized ClanResult setBanner(UUID owner, String serialized) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, owner)) return ClanResult.NOT_LEADER;
@@ -564,7 +566,7 @@ public final class ClanService {
         return ClanResult.BANNER_SET;
     }
 
-    public void recordKill(UUID killer, UUID victim) {
+    public synchronized void recordKill(UUID killer, UUID victim) {
         Clan kClan = clanOf(killer);
         if (kClan != null) {
             kClan.kills.put(killer.toString(), kClan.kills.getOrDefault(killer.toString(), 0) + 1);
@@ -576,18 +578,18 @@ public final class ClanService {
         if (kClan != null || vClan != null) persist();
     }
 
-    public Map<String, Integer> getKills(UUID member) {
+    public synchronized Map<String, Integer> getKills(UUID member) {
         Clan clan = clanOf(member);
         return clan != null ? new HashMap<>(clan.kills) : Collections.emptyMap();
     }
 
-    public String getMostKilled(UUID member) {
+    public synchronized String getMostKilled(UUID member) {
         Clan clan = clanOf(member);
         if (clan == null || clan.kills.isEmpty()) return "None";
         return clan.kills.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse("None");
     }
 
-    public ClanResult rename(UUID owner, String newName) {
+    public synchronized ClanResult rename(UUID owner, String newName) {
         Clan clan = clanOf(owner);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!clan.owner.equals(owner.toString())) return ClanResult.NOT_OWNER;
@@ -600,7 +602,7 @@ public final class ClanService {
         return ClanResult.RENAMED;
     }
 
-    public ClanResult setLocale(UUID member, String locale) {
+    public synchronized ClanResult setLocale(UUID member, String locale) {
         Clan clan = clanOf(member);
         if (clan == null) return ClanResult.NO_CLAN;
         if (!isLeader(clan, member)) return ClanResult.NOT_LEADER;
@@ -609,16 +611,16 @@ public final class ClanService {
         return ClanResult.LOCALE_SET;
     }
 
-    public void setGlobalFf(boolean on) {
+    public synchronized void setGlobalFf(boolean on) {
         globalFf = on;
         persist();
     }
 
-    public boolean globalFf() {
+    public synchronized boolean globalFf() {
         return globalFf;
     }
 
-    public boolean areFriendly(UUID a, UUID b) {
+    public synchronized boolean areFriendly(UUID a, UUID b) {
         if (globalFf) {
             return false;
         }

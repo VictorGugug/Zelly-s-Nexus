@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public final class ClanSubcommand implements BasicCommand {
+    private static final java.util.regex.Pattern MEMBER_ID = java.util.regex.Pattern.compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
     private final Translator translator;
     private final ClanService service;
 
@@ -244,13 +245,10 @@ public final class ClanSubcommand implements BasicCommand {
                 }
                 int gathered = 0;
                 for (String id : clan.members) {
-                    try {
-                        Player mate = Bukkit.getPlayer(UUID.fromString(id));
-                        if (mate != null && !mate.equals(player)) {
-                            mate.teleportAsync(player.getLocation());
-                            gathered++;
-                        }
-                    } catch (IllegalArgumentException ignored) {
+                    Player mate = onlineMember(id);
+                    if (mate != null && !mate.equals(player)) {
+                        mate.teleportAsync(player.getLocation());
+                        gathered++;
                     }
                 }
                 player.sendMessage(translator.get(TranslationKey.CLAN_REGROUP, gathered));
@@ -323,13 +321,10 @@ public final class ClanSubcommand implements BasicCommand {
                 }
                 List<String> lines = new ArrayList<>();
                 for (String id : clan.members) {
-                    try {
-                        Player mate = Bukkit.getPlayer(UUID.fromString(id));
-                        if (mate != null && mate.isOnline()) {
-                            org.bukkit.Location l = mate.getLocation();
-                            lines.add(mate.getName() + " " + l.getBlockX() + "," + l.getBlockY() + "," + l.getBlockZ());
-                        }
-                    } catch (IllegalArgumentException ignored) {
+                    Player mate = onlineMember(id);
+                    if (mate != null && mate.isOnline()) {
+                        org.bukkit.Location l = mate.getLocation();
+                        lines.add(mate.getName() + " " + l.getBlockX() + "," + l.getBlockY() + "," + l.getBlockZ());
                     }
                 }
                 player.sendMessage(translator.get(TranslationKey.CLAN_COORDS, lines.isEmpty() ? "-" : String.join("; ", lines)));
@@ -343,12 +338,9 @@ public final class ClanSubcommand implements BasicCommand {
                 }
                 List<String> lines = new ArrayList<>();
                 for (String id : clan.members) {
-                    try {
-                        Player mate = Bukkit.getPlayer(UUID.fromString(id));
-                        if (mate != null && mate.isOnline()) {
-                            lines.add(mate.getName() + " " + Math.round(mate.getHealth()) + "hp food:" + mate.getFoodLevel());
-                        }
-                    } catch (IllegalArgumentException ignored) {
+                    Player mate = onlineMember(id);
+                    if (mate != null && mate.isOnline()) {
+                        lines.add(mate.getName() + " " + Math.round(mate.getHealth()) + "hp food:" + mate.getFoodLevel());
                     }
                 }
                 player.sendMessage(translator.get(TranslationKey.CLAN_VITALS, lines.isEmpty() ? "-" : String.join("; ", lines)));
@@ -389,5 +381,9 @@ public final class ClanSubcommand implements BasicCommand {
             return Arrays.asList("create", "disband", "invite", "accept", "kick", "leave", "ally", "rival", "war", "rank", "home", "home-set", "description", "verify", "ban", "unban", "ff", "clanff", "globalff", "bb", "stats", "roster", "list", "lookup", "regroup", "trust", "untrust", "mute", "setbanner", "kills", "mostkilled", "coords", "vitals", "rivalries", "profile", "rename", "locale", "help").stream().filter(s -> s.startsWith(args.length == 1 ? args[0].toLowerCase() : "")).collect(Collectors.toList());
         }
         return List.of();
+    }
+
+    private static Player onlineMember(String id) {
+        return MEMBER_ID.matcher(id).matches() ? Bukkit.getPlayer(UUID.fromString(id)) : null;
     }
 }
