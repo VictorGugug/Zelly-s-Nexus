@@ -28,6 +28,15 @@ dependencies {
     testImplementation("io.papermc.paper:paper-api:26.3.build.+")
 }
 
+base {
+    archivesName.set("ZellysNexus")
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
 tasks {
     named<AbstractArchiveTask>("jar") {
         isEnabled = false
@@ -42,6 +51,9 @@ tasks {
         filesMatching("paper-plugin.yml") {
             expand(replacements)
         }
+    }
+    named<Javadoc>("javadoc") {
+        (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet")
     }
     runServer {
         minecraftVersion("26.3")

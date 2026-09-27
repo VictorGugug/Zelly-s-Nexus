@@ -21,18 +21,21 @@ on:
       - '**.md'
       - 'images/**'
       - '.gitignore'
-  release:
-    types: [ published ]
   schedule:
     - cron: '0 3 * * 0'
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version to build and publish (e.g. 0.1.0 or 0.1.0-alpha)"
+        description: "Release version, blank to use gradle.properties (e.g. 0.1.0 or 0.1.0-alpha)"
         required: false
-      tag:
-        description: "Release tag to rebuild and publish (e.g. 0.1.0)"
-        required: false
+      mode:
+        description: "dry-run builds and previews, publish creates the GitHub Release, cancel does nothing"
+        type: choice
+        options:
+          - dry-run
+          - publish
+          - cancel
+        default: dry-run
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -41,7 +44,6 @@ concurrency:
 jobs:
   build-and-test:
     name: Build and Test
-    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     outputs:
       plugin_version: ${{ steps.meta.outputs.plugin_version }}
@@ -139,7 +141,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ZellysNexus-build-${{ steps.meta.outputs.plugin_version }}
-          path: paper/build/libs/ZellysNexus-*.jar
+          path: paper/build/libs/ZellysNexus-${{ steps.meta.outputs.plugin_version }}.jar
           retention-days: 7
 
       - name: Upload test results on failure
@@ -262,152 +264,199 @@ jobs:
           | **Code Integrity** | Zero placeholder markers (`TODO`, `FIXME`, `XXX`) | Passed |
           EOF
 
-  create-release:
-    name: Build and Create GitHub Release
-    if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+  release-prepare:
+    name: Prepare Release
+    if: github.event_name == 'workflow_dispatch' && inputs.mode != 'cancel'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      dev_build: ${{ steps.meta.outputs.dev_build }}
+      jar_name: ${{ steps.stage.outputs.jar_name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version and channel
+        id: meta
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          PROPS="gradle.properties"
+          BASE_VER=$(grep -E '^[[:space:]]*nexusVersion=' "$PROPS" | cut -d'=' -f2 | tr -d '[:space:]')
+          SUFFIX=$(grep -E '^[[:space:]]*versionSuffix=' "$PROPS" | cut -d'=' -f2 | tr -d '[:space:]')
+          BUILT="${BASE_VER}${SUFFIX:+-$SUFFIX}"
+          VERSION="${VERSION_INPUT:-$BUILT}"
+          if [ "$VERSION" != "$BUILT" ]; then
+            echo "::error::Requested version $VERSION does not match gradle.properties ($BUILT)."
+            exit 1
+          fi
+          if echo "$SUFFIX" | grep -qiE '(alpha|beta|rc|dev|snapshot|bedev|exp)'; then
+            DEV_BUILD=true
+          else
+            DEV_BUILD=false
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "base=$BASE_VER" >> "$GITHUB_OUTPUT"
+          echo "dev_build=$DEV_BUILD" >> "$GITHUB_OUTPUT"
+
+      - name: Select release notes
+        id: notes
+        run: |
+          mkdir -p build/reports
+          VERSION="${{ steps.meta.outputs.version }}"
+          NOTES=""
+          for candidate in "DOCS/${VERSION}_CHANGELOG.md" "DOCS/${{ steps.meta.outputs.base }}_CHANGELOG.md"; do
+            if [ -f "$candidate" ]; then
+              NOTES="$candidate"
+              break
+            fi
+          done
+          if [ -n "$NOTES" ]; then
+            cp "$NOTES" build/reports/release-notes.md
+            echo "source=$NOTES" >> "$GITHUB_OUTPUT"
+            echo "url=https://github.com/${{ github.repository }}/blob/${{ github.sha }}/$NOTES" >> "$GITHUB_OUTPUT"
+          else
+            python3 .github/scripts/generate_version_commits.py --version "$VERSION" --release-body --output-file build/reports/release-notes.md
+            echo "source=generated from commit history" >> "$GITHUB_OUTPUT"
+            echo "url=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build plugin, sources and javadoc
+        run: |
+          chmod +x gradlew
+          ./gradlew build --no-daemon
+
+      - name: Stage release files
+        id: stage
+        run: |
+          VERSION="${{ steps.meta.outputs.version }}"
+          mkdir -p build/release
+          cp "paper/build/libs/ZellysNexus-${VERSION}.jar" \
+             "paper/build/libs/ZellysNexus-${VERSION}-sources.jar" \
+             "paper/build/libs/ZellysNexus-${VERSION}-javadoc.jar" \
+             build/reports/release-notes.md build/release/
+          (cd build/release && sha256sum *.jar > checksums.sha256)
+          echo "jar_name=ZellysNexus-${VERSION}.jar" >> "$GITHUB_OUTPUT"
+          echo "jar_size=$(ls -lh "build/release/ZellysNexus-${VERSION}.jar" | awk '{print $5}')" >> "$GITHUB_OUTPUT"
+          echo "jar_sha=$(sha256sum "build/release/ZellysNexus-${VERSION}.jar" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          ls -la build/release
+
+      - name: Upload staged release files
+        uses: actions/upload-artifact@v7
+        with:
+          name: zellys-nexus-release-${{ steps.meta.outputs.version }}
+          path: build/release/
+          retention-days: 7
+
+      - name: Write release preview
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          DEV_BUILD: ${{ steps.meta.outputs.dev_build }}
+          MODE: ${{ inputs.mode }}
+          NOTES_SOURCE: ${{ steps.notes.outputs.source }}
+          NOTES_URL: ${{ steps.notes.outputs.url }}
+        run: |
+          {
+            echo "# Release preview: ${VERSION}"
+            echo ""
+            echo "| Property | Value |"
+            echo "| :--- | :--- |"
+            echo "| **Version** | \`${VERSION}\` |"
+            echo "| **Plugin JAR** | \`${{ steps.stage.outputs.jar_name }}\` (${{ steps.stage.outputs.jar_size }}) |"
+            echo "| **SHA-256** | \`${{ steps.stage.outputs.jar_sha }}\` |"
+            if [ -n "$NOTES_URL" ]; then
+              echo "| **Release notes** | [\`${NOTES_SOURCE}\`](${NOTES_URL}) |"
+            else
+              echo "| **Release notes** | ${NOTES_SOURCE} |"
+            fi
+            if [ "$DEV_BUILD" = "true" ]; then
+              echo "| **Targets** | GitHub Releases only, as a pre-release (development build) |"
+            else
+              echo "| **Targets** | GitHub Releases (no plugin platform is configured yet) |"
+            fi
+            echo ""
+            if [ "$MODE" = "publish" ]; then
+              echo "> Publish mode: the release job runs next."
+            else
+              echo "> Dry run: nothing was uploaded. Run again with mode \`publish\` to release."
+            fi
+            echo ""
+            echo "## Release notes"
+            echo ""
+            cat build/reports/release-notes.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release-publish:
+    name: Publish Release
+    needs: [ release-prepare ]
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish'
     permissions:
       contents: write
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Download staged release files
+        uses: actions/download-artifact@v8
         with:
-          fetch-depth: 0
-
-      - name: Generate version changelog
-        id: changelog
-        run: |
-          python3 .github/scripts/generate_version_commits.py --version "${{ inputs.version }}" --release-body --output-file build/reports/release-notes.md
-
-      - name: Set up JDK 25
-        uses: actions/setup-java@v6
-        with:
-          java-version: '25'
-          distribution: 'temurin'
-
-      - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v6
-
-      - name: Make gradlew executable
-        run: chmod +x gradlew
-
-      - name: Build shadow JAR
-        run: ./gradlew :paper:shadowJar --no-daemon
-
-      - name: Locate JAR
-        id: jar
-        run: |
-          JAR=$(find paper/build/libs -name "ZellysNexus-*.jar" \
-                ! -name "*-javadoc*" ! -name "*-sources*" | head -1)
-          FILE_SIZE=$(ls -lh "$JAR" | awk '{print $5}')
-          echo "path=$JAR" >> "$GITHUB_OUTPUT"
-          echo "name=$(basename $JAR)" >> "$GITHUB_OUTPUT"
-          echo "size=$FILE_SIZE" >> "$GITHUB_OUTPUT"
+          name: zellys-nexus-release-${{ needs.release-prepare.outputs.version }}
+          path: build/release/
 
       - name: Create GitHub Release
         id: gh_release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ inputs.version }}
-          name: "Zellys Nexus ${{ inputs.version }}"
-          body_path: build/reports/release-notes.md
-          files: ${{ steps.jar.outputs.path }}
+          tag_name: ${{ needs.release-prepare.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: "Zellys Nexus ${{ needs.release-prepare.outputs.version }}"
+          body_path: build/release/release-notes.md
+          files: |
+            build/release/*.jar
+            build/release/checksums.sha256
           draft: false
-          prerelease: ${{ contains(inputs.version, 'SNAPSHOT') || contains(inputs.version, 'dev') || contains(inputs.version, 'alpha') || contains(inputs.version, 'beta') || contains(inputs.version, 'rc') }}
+          prerelease: ${{ needs.release-prepare.outputs.dev_build == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload release artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: zellys-nexus-jar
-          path: ${{ steps.jar.outputs.path }}
-          retention-days: 1
-
-      - name: Publish release step summary
+      - name: Write Discord announcement
+        env:
+          VERSION: ${{ needs.release-prepare.outputs.version }}
+          DEV_BUILD: ${{ needs.release-prepare.outputs.dev_build }}
+          RELEASE_URL: ${{ steps.gh_release.outputs.url }}
         run: |
-          cat << EOF >> "$GITHUB_STEP_SUMMARY"
-          ## GitHub Release Created Successfully
-
-          | Metric | Details |
-          | :--- | :--- |
-          | **Release Name** | \`Zellys Nexus ${{ inputs.version }}\` |
-          | **Tag Name** | \`${{ inputs.version }}\` |
-          | **Asset** | \`${{ steps.jar.outputs.name }}\` (\`${{ steps.jar.outputs.size }}\`) |
-          | **Release URL** | [View Release](${{ steps.gh_release.outputs.url }}) |
-          EOF
-
-  publish-artifacts:
-    name: Publish Release Artifacts
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
-    runs-on: ubuntu-latest
-    outputs:
-      jar_path: ${{ steps.jar.outputs.path }}
-      version:  ${{ steps.jar.outputs.version }}
-      channel:  ${{ steps.jar.outputs.channel }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Set up JDK 25
-        uses: actions/setup-java@v6
-        with:
-          java-version: '25'
-          distribution: 'temurin'
-
-      - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v6
-
-      - name: Make gradlew executable
-        run: chmod +x gradlew
-
-      - name: Build shadow JAR
-        run: ./gradlew :paper:shadowJar --no-daemon
-
-      - name: Locate JAR and resolve metadata
-        id: jar
-        run: |
-          JAR=$(find paper/build/libs -name "ZellysNexus-*.jar" \
-                ! -name "*-javadoc*" ! -name "*-sources*" | head -1)
-          VERSION=$(basename "$JAR" .jar | sed 's/^ZellysNexus-//')
-
-          if echo "$VERSION" | grep -qiE 'snapshot|alpha|dev|nightly|wip'; then
-            CHANNEL="alpha"
-          elif echo "$VERSION" | grep -qiE 'beta|rc'; then
-            CHANNEL="beta"
-          else
-            CHANNEL="release"
-          fi
-
-          FILE_SIZE=$(ls -lh "$JAR" | awk '{print $5}')
-
-          echo "path=$JAR"       >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
-          echo "size=$FILE_SIZE"  >> "$GITHUB_OUTPUT"
-          echo "Built: $JAR (version=$VERSION, channel=$CHANNEL, size=$FILE_SIZE)"
-
-      - name: Upload published JAR artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: ZellysNexus-publish-${{ steps.jar.outputs.version }}
-          path: ${{ steps.jar.outputs.path }}
-          retention-days: 30
-
-      - name: Publish step summary
-        run: |
-          cat << EOF >> "$GITHUB_STEP_SUMMARY"
-          ## Zellys Nexus Release Published
-
-          | Metric | Details |
-          | :--- | :--- |
-          | **Version** | \`${{ steps.jar.outputs.version }}\` |
-          | **Channel** | \`${{ steps.jar.outputs.channel }}\` |
-          | **Artifact Path** | \`${{ steps.jar.outputs.path }}\` |
-          | **Artifact Size** | \`${{ steps.jar.outputs.size }}\` |
-          | **Event** | \`${{ github.event_name }}\` |
-          EOF
+          FENCE='```'
+          {
+            echo "## Discord Announcement"
+            echo ""
+            echo "**Post title**"
+            echo "${FENCE}"
+            echo "${VERSION} RELEASE"
+            echo "${FENCE}"
+            echo "**Tag**"
+            echo "${FENCE}"
+            echo "V - ${VERSION}"
+            echo "${FENCE}"
+            echo "**GitHub release**"
+            echo "${FENCE}"
+            echo "${RELEASE_URL}"
+            echo "${FENCE}"
+            if [ "$DEV_BUILD" = "true" ]; then
+              echo "Pre-release build, published on GitHub only."
+            else
+              echo "No plugin platform is configured yet, so there are no platform links."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
