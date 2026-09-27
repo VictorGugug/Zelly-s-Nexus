@@ -271,6 +271,7 @@ jobs:
     outputs:
       version: ${{ steps.meta.outputs.version }}
       dev_build: ${{ steps.meta.outputs.dev_build }}
+      game_versions: ${{ steps.meta.outputs.game_versions }}
       jar_name: ${{ steps.stage.outputs.jar_name }}
 
     steps:
@@ -298,8 +299,10 @@ jobs:
           else
             DEV_BUILD=false
           fi
+          GAMES=$(grep -E '^[[:space:]]*#[[:space:]]*Supported on nexusVersion' "$PROPS" | head -1 | cut -d':' -f2 | tr -d ' \r' | jq -Rc 'split(",")')
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "base=$BASE_VER" >> "$GITHUB_OUTPUT"
+          echo "game_versions=$GAMES" >> "$GITHUB_OUTPUT"
           echo "dev_build=$DEV_BUILD" >> "$GITHUB_OUTPUT"
 
       - name: Select release notes
@@ -387,7 +390,7 @@ jobs:
             if [ "$DEV_BUILD" = "true" ]; then
               echo "| **Targets** | GitHub Releases only, as a pre-release (development build) |"
             else
-              echo "| **Targets** | GitHub Releases (no plugin platform is configured yet) |"
+              echo "| **Targets** | GitHub Releases and Modrinth (plugin JAR only, skipped when the version exists or no token is set) |"
             fi
             echo ""
             if [ "$MODE" = "publish" ]; then
@@ -408,6 +411,9 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
+    env:
+      MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+      MODRINTH_PROJECT: ${{ vars.MODRINTH_PROJECT_ID || 'zellys-nexus' }}
 
     steps:
       - name: Download staged release files
@@ -432,11 +438,36 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload to Modrinth
+        id: modrinth
+        if: needs.release-prepare.outputs.dev_build != 'true' && env.MODRINTH_TOKEN != ''
+        env:
+          VERSION: ${{ needs.release-prepare.outputs.version }}
+          GAME_VERSIONS: ${{ needs.release-prepare.outputs.game_versions }}
+        run: |
+          API="https://api.modrinth.com/v2"
+          PROJECT_ID=$(curl -s --fail-with-body -H "Authorization: $MODRINTH_TOKEN" "$API/project/$MODRINTH_PROJECT" | jq -r '.id')
+          FOUND=$(curl -s --fail-with-body -H "Authorization: $MODRINTH_TOKEN" "$API/project/$PROJECT_ID/version" \
+            | jq --arg v "$VERSION" '[.[] | select(.version_number == $v)] | length')
+          if [ "$FOUND" != "0" ]; then
+            echo "Modrinth already has $VERSION, skipping the upload."
+            echo "status=exists" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          jq -n --arg p "$PROJECT_ID" --arg v "$VERSION" --rawfile notes build/release/release-notes.md --argjson games "$GAME_VERSIONS" \
+            '{project_id: $p, version_number: $v, name: ("Zellys Nexus " + $v), changelog: $notes, version_type: "release",
+              game_versions: $games, loaders: ["paper", "purpur", "folia"], dependencies: [], featured: true, file_parts: ["file"]}' > modrinth.json
+          curl -s --fail-with-body -X POST "$API/version" -H "Authorization: $MODRINTH_TOKEN" \
+            -F "data=<modrinth.json;type=application/json" -F "file=@build/release/ZellysNexus-${VERSION}.jar"
+          echo "status=uploaded" >> "$GITHUB_OUTPUT"
+
       - name: Write Discord announcement
+        if: always() && steps.gh_release.outcome == 'success'
         env:
           VERSION: ${{ needs.release-prepare.outputs.version }}
           DEV_BUILD: ${{ needs.release-prepare.outputs.dev_build }}
           RELEASE_URL: ${{ steps.gh_release.outputs.url }}
+          MODRINTH_STATUS: ${{ steps.modrinth.outputs.status }}
         run: |
           FENCE='```'
           {
@@ -456,7 +487,12 @@ jobs:
             echo "${FENCE}"
             if [ "$DEV_BUILD" = "true" ]; then
               echo "Pre-release build, published on GitHub only."
+            elif [ -n "$MODRINTH_STATUS" ]; then
+              echo "**Download platforms**"
+              echo "${FENCE}"
+              echo "MODRINTH: https://modrinth.com/plugin/${MODRINTH_PROJECT}/version/${VERSION}"
+              echo "${FENCE}"
             else
-              echo "No plugin platform is configured yet, so there are no platform links."
+              echo "Modrinth upload did not run, so there are no platform links."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
