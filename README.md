@@ -1,21 +1,5 @@
 <div align="center">
 
-<pre>
-███████╗███████╗██╗     ██╗     ██╗   ██╗██╗   ███████╗
-╚══███╔╝██╔════╝██║     ██║     ╚██╗ ██╔╝██║   ██╔════╝
- ███╔╝ █████╗  ██║     ██║      ╚████╔╝ ╚═╝   ███████╗
- ███╔╝  ██╔══╝  ██║     ██║       ╚██╔╝        ╚════██║
-███████╗███████╗███████╗███████╗   ██║         ███████║
-╚══════╝╚══════╝╚══════╝╚══════╝   ╚═╝         ╚══════╝
-
-███╗   ██╗███████╗██╗  ██╗██╗   ██╗███████╗
-████╗  ██║██╔════╝╚██╗██╔╝██║   ██║██╔════╝
-██╔██╗ ██║█████╗   ╚███╔╝ ██║   ██║███████╗
-██║╚██╗██║██╔══╝   ██╔██╗ ██║   ██║╚════██║
-██║ ╚████║███████╗██╔╝ ██╗╚██████╔╝███████║
-╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝
-</pre>
-
 # Zelly's Nexus
 
 An all-in-one Minecraft plugin, formerly known as Zaynr Nexus. I am
@@ -29,17 +13,38 @@ Zelly's Nexus targets **Minecraft: Java Edition 26.x** and is intended to provid
 
 The project is currently in early development. Features, APIs, and compatibility targets may change. The project name itself is also not final and may change during development.
 
+## Modules
+
+Every module lives under one root command, `/zn`, with a short alias per module. `/zn help` lists the modules the sender can use.
+
+| Module | Command | What it covers |
+|---|---|---|
+| Auth | `/zn auth` | Register, login, sessions, TOTP, PIN, captcha, premium auto-login |
+| Antibot | `/zn antibot` | Join throttle, name and blacklist checks, panic mode |
+| Essentials | `/zn essentials` | Spawn, homes, warps, teleport requests, kits, jails, mail, moderation |
+| Chat | `/zn chat` | Local and shout chat, item and inventory showcases |
+| Clans | `/zn clans` | Clans, ranks, alliances, wars, friendly fire, clan home |
+| Inventory | `/zn inventory` | Inventory and ender chest view, clear, clone, give, death rollback |
+| ItemEdit | `/zn itemedit` | Rename, lore, enchantments, attributes, stored server items |
+| TAB | `/zn tab` | Player list header and footer, join bossbar |
+| Integrations | `/zn integrations` | LuckPerms, Geyser, Floodgate and PlaceholderAPI detection |
+| Debug | `/zn debug` | Self-tests for every area, saved as a dated report |
+
 ## Compatibility
 
 | Platform | Status | Reference |
 |---|---|---|
-| [Paper](https://papermc.io/software/paper) | Planned | [PaperMC documentation](https://docs.papermc.io/paper/) |
-| [Purpur](https://purpurmc.org/) | Planned | [Purpur documentation](https://purpurmc.org/docs) |
-| [Folia](https://papermc.io/software/folia) | Planned | [Folia documentation](https://github.com/PaperMC/Folia) |
+| [Paper](https://papermc.io/software/paper) | Alpha, loads and passes `/zn debug` on 26.3 | [PaperMC documentation](https://docs.papermc.io/paper/) |
+| [Purpur](https://purpurmc.org/) | Expected to work as a Paper fork, not tested yet | [Purpur documentation](https://purpurmc.org/docs) |
+| [Folia](https://papermc.io/software/folia) | Alpha, loads and passes `/zn debug` on 26.2 | [Folia documentation](https://github.com/PaperMC/Folia) |
 | [Minecraft: Bedrock Edition](https://www.minecraft.net/about-minecraft) | Possible compatibility under consideration | [Geyser](https://geysermc.org/) and [Floodgate](https://geysermc.org/wiki/floodgate/) |
 | Other server software | Under evaluation | Compatibility will be assessed individually |
 
 Compatibility with Minecraft: Bedrock Edition depends on the integration layer provided by Geyser and Floodgate. No Bedrock compatibility is guaranteed until it has been implemented and tested.
+
+## Download
+
+Builds are published on [GitHub Releases](https://github.com/VictorGugug/Zelly-s-Nexus/releases). Development builds (alpha, beta, rc) are marked as pre-releases and are only published there.
 
 ## Contributing
 
